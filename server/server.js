@@ -603,6 +603,10 @@ async function handlePlayerLeave(socket, roomKey) {
 // ─────────────────────────────────────────────
 // SPA FALLBACKS
 // ─────────────────────────────────────────────
+app.get('/', (_req, res) =>
+  res.redirect('/player')
+);
+
 app.get('/player', (_req, res) =>
   res.sendFile(path.join(__dirname, '..', 'public', 'player', 'index.html'))
 );
