@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mind Field — Host Profile</title>
+  <link rel="stylesheet" href="/shared/style.css"/>
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+    .profile-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; gap:16px; }
+    .profile-card { width:100%; max-width:480px; }
+    .profile-card h2 { font-family:var(--font-display); font-size:1.3rem; margin-bottom:16px; color: var(--white); text-shadow:var(--text-shadow-2); }
+    .section-divider { border:none; border-top:1px solid rgba(0,0,0,0.1); margin:16px 0; }
+    .btn-save { width:100%; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/host/dashboard.html" class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt="Mind Field"/>
+      <span class="logo-text">MiND FiELD</span>
+    </a>
+    <div class="nav-right">
+      <a href="/host/dashboard.html" class="btn btn-ghost">X Close</a>
+    </div>
+  </nav>
+
+  <div class="profile-wrap">
+    <div class="card profile-card">
+
+      <!-- Display Name -->
+      <h2>Edit Profile</h2>
+      <div id="nameMsg" class="msg"></div>
+      <div class="input-group">
+        <label for="displayName">Display Name</label>
+        <input type="text" id="displayName" maxlength="40"/>
+      </div>
+      <button class="btn btn-primary btn-save" id="saveNameBtn" onclick="saveName()">Save Display Name</button>
+
+      <hr class="section-divider"/>
+
+      <!-- Change Password -->
+      <h2>Change Password</h2>
+      <div id="pwMsg" class="msg"></div>
+      <div class="input-group">
+        <label for="currentPassword">Current Password</label>
+        <input type="password" id="currentPassword" autocomplete="current-password"/>
+      </div>
+      <div class="input-group">
+        <label for="newPassword">New Password</label>
+        <input type="password" id="newPassword" autocomplete="new-password"/>
+      </div>
+      <div class="input-group">
+        <label for="confirmPassword">Confirm New Password</label>
+        <input type="password" id="confirmPassword" autocomplete="new-password"/>
+      </div>
+      <button class="btn btn-primary btn-save" id="savePwBtn" onclick="savePassword()">Change Password</button>
+
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('mf_token');
+    if (!token) window.location.href = '/host/signin.html';
+
+    // Pre-fill display name from localStorage
+    const host = JSON.parse(localStorage.getItem('mf_host') || '{}');
+    document.getElementById('displayName').value = host.displayName || '';
+
+    async function saveName() {
+      const displayName = document.getElementById('displayName').value.trim();
+      const msg = document.getElementById('nameMsg');
+      const btn = document.getElementById('saveNameBtn');
+      msg.className = 'msg'; msg.textContent = '';
+
+      if (!displayName) { msg.className = 'msg error'; msg.textContent = 'Display name cannot be empty.'; return; }
+
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        const res  = await fetch('/api/host/profile', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ displayName })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        // Update localStorage
+        host.displayName = data.displayName;
+        localStorage.setItem('mf_host', JSON.stringify(host));
+
+        msg.className = 'msg success'; msg.textContent = 'Display name updated!';
+      } catch (e) {
+        msg.className = 'msg error'; msg.textContent = e.message;
+      } finally {
+        btn.disabled = false; btn.textContent = 'Save Display Name';
+      }
+    }
+
+    async function savePassword() {
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword     = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const msg = document.getElementById('pwMsg');
+      const btn = document.getElementById('savePwBtn');
+      msg.className = 'msg'; msg.textContent = '';
+
+      if (!currentPassword || !newPassword || !confirmPassword) { msg.className = 'msg error'; msg.textContent = 'All password fields are required.'; return; }
+      if (newPassword !== confirmPassword) { msg.className = 'msg error'; msg.textContent = 'New passwords do not match.'; return; }
+      if (newPassword.length < 6) { msg.className = 'msg error'; msg.textContent = 'New password must be at least 6 characters.'; return; }
+
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        const res  = await fetch('/api/host/profile', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        msg.className = 'msg success'; msg.textContent = 'Password changed successfully!';
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+      } catch (e) {
+        msg.className = 'msg error'; msg.textContent = e.message;
+      } finally {
+        btn.disabled = false; btn.textContent = 'Change Password';
+      }
+    }
+  </script>
+</body>
+</html>

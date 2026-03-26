@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Mind Field</title>
+  <link rel="stylesheet" href="/player/player-style.css"/>
+  <link rel="stylesheet" href="../shared/style.css"/>
+  <style>
+    body { display:flex; flex-direction:column; height:100dvh; overflow:hidden; }
+    .navbar .player-count { font-family:var(--font-display); font-size:1rem; }
+
+    /* ── VIEW TRANSITIONS ────────────────────── */
+    .view { display:none; flex-direction:column; align-items:center; justify-content:center; animation:fadeSlideIn 0.35s ease both; overflow:hidden; width:100%; }
+    .view.active { display:flex; flex:1; min-height:0; }
+    @keyframes fadeSlideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes popIn       { from{opacity:0;transform:scale(0.6)} to{opacity:1;transform:scale(1)} }
+    @keyframes backdropIn  { from{opacity:0} to{opacity:1} }
+    @keyframes modalSlideUp { from{opacity:0;transform:translateY(40px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+
+    /* ── ERROR ───────────────────────────────── */
+    #view-error { gap:20px; padding:40px 24px; text-align:center; flex:1; min-height:0; align-items:center; justify-content:center; }
+    .error-icon  { font-size:3.5rem; line-height:1; animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .error-title { font-family:var(--font-display); font-size:2.2rem; color:var(--white); text-shadow:3px 3px 0 var(--black); animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.05s both; }
+    .error-msg   { font-family:var(--font-display); font-size:1rem; color:var(--black); animation:fadeSlideIn 0.3s ease 0.15s both; }
+    #view-error .btn-outline { max-width:220px; }
+
+    /* ── LOBBY ───────────────────────────────── */
+    #view-lobby { padding:10px 20px 16px; gap:10px; flex:1; min-height:0; align-items:stretch; justify-content:flex-start; }
+    .room-title { font-family:var(--font-display); font-size:2rem; color:var(--white); text-shadow:var(--text-shadow-2); text-align:center; margin-top:4px; flex-shrink:0; }
+    .player-card {
+      background:var(--sky-card); border:none;
+      border-radius:var(--radius-lg); padding:16px 18px;
+      overflow-y:auto;
+      overflow-x:hidden;
+      flex-shrink:1;
+      flex-grow:0;
+      /* Fixed height — always leaves room for title + countdown */
+      height:52vh;
+      max-height:52vh;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+    .player-card::-webkit-scrollbar { display:none; }
+    .players-title { font-family:var(--font-display); font-size:1.3rem; color:var(--white); text-shadow:2px 2px 0 var(--black); margin-bottom:10px; flex-shrink:0; }
+    .player-item { font-size:1rem; font-weight:700; padding:7px 0; border-bottom:1px solid rgba(0,0,0,0.1); animation:fadeSlideIn 0.25s ease both; }
+    .player-item:last-child { border-bottom:none; }
+    .me-tag { font-size:0.75rem; font-weight:800; background:var(--salmon); border:1px solid var(--black); border-radius:var(--radius-pill); padding:1px 8px; margin-left:8px; }
+    .countdown-bar { text-align:center; font-family:var(--font-display); font-size:1.1rem; color:var(--black); padding:8px 12px; flex-shrink:0; min-height:44px; }
+
+    /* ── QUESTION ────────────────────────────── */
+    #view-question {
+      padding:10px 16px 16px;
+      gap:10px;
+      position:relative;
+      justify-content:flex-start;  /* stack top-to-bottom */
+    }
+
+    /* Timer row */
+    .timer-row {
+      display:flex; align-items:center; gap:10px;
+      width:100%; flex-shrink:0; padding:0 4px;
+    }
+    .timer-num {
+      font-family:var(--font-display); font-size:1.1rem;
+      color:var(--white); text-shadow:var(--text-shadow-1);font-weight:800;
+      min-width:28px; text-align:center; flex-shrink:0;
+    }
+    .timer-track {
+      flex:1; height:12px; border-radius:6px;
+      background:rgba(0,0,0,0.15); overflow:hidden;
+    }
+    .timer-fill {
+      height:100%; border-radius:6px;
+      background:#F4AAAA;
+      width:100%;
+    }
+
+    /* Question card — fills all remaining space */
+    .question-card {
+      background:var(--sky-card); border:none;
+      border-radius:var(--radius-lg); padding:16px 18px;
+      overflow-y:auto; flex:1; min-height:0;
+      display:flex; flex-direction:column;
+      scrollbar-width:none; -ms-overflow-style:none;
+    }
+    .question-card::-webkit-scrollbar { display:none; }
+    .question-num  { font-weight:800; font-size:0.85rem; margin-bottom:6px; flex-shrink:0; color:var(--white); text-shadow: var(--text-shadow-1); }
+    .question-text {
+      font-family:var(--font-display); font-size:1.7rem; line-height:1.3;
+      text-align:center; color:var(--white);
+      text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+      display:flex; align-items:center; justify-content:center;
+      flex:1; /* fills card height */
+    }
+
+    .choices-list { display:flex; flex-direction:column; gap:10px; width:100%; padding:0 4px; box-sizing:border-box; flex-shrink:0; }
+    .choice-btn {
+      width:100%; padding:14px 18px; border:2px solid var(--black);
+      border-radius:var(--radius-pill); font-family:var(--font-body); font-weight:700;
+      font-size:0.95rem; text-align:left; cursor:pointer;
+      background:var(--salmon); color:var(--black);
+      transition:background 0.2s, transform 0.15s, box-shadow 0.2s;
+      animation:fadeSlideIn 0.3s ease both;
+    }
+    .choice-btn:nth-child(1){animation-delay:0.00s}
+    .choice-btn:nth-child(2){animation-delay:0.06s}
+    .choice-btn:nth-child(3){animation-delay:0.12s}
+    .choice-btn:nth-child(4){animation-delay:0.18s}
+    .choice-btn:active:not(:disabled) { transform:scale(0.97); }
+    .choice-btn:disabled { cursor:not-allowed; }
+    .choice-btn.selected { background:#d45f5f; box-shadow:0 0 0 3px var(--black); }
+    .choice-btn.wrong    { background:var(--black); color:var(--white); box-shadow:none; }
+    .choice-btn.correct  { background:var(--salmon); box-shadow:0 0 0 3px var(--black); }
+
+    /* ── CONFIRM MODAL ───────────────────────── */
+    .modal-backdrop {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.45); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      align-items:center; justify-content:center;
+      padding:16px;
+      z-index:200;
+      animation:backdropIn 0.2s ease both;
+    }
+    .modal-backdrop.show { display:flex; }
+    .modal-card {
+      background:var(--sky-card); border:var(--border); border-radius:var(--radius-lg);
+      padding:22px 20px;
+      width:calc(100% - 32px); max-width:360px;
+      box-sizing:border-box;
+      /* Push up above iPhone home bar */
+      margin-bottom:env(safe-area-inset-bottom, 0px);
+      animation:modalSlideUp 0.28s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .modal-question { font-family:var(--font-display); font-size:1rem; color:var(--black); margin-bottom:6px; }
+    .modal-selected-answer { font-family:var(--font-display); font-size:1.3rem; color:var(--white); text-shadow: var(--text-shadow-1); padding:10px 18px; text-align:center; margin-bottom:18px; }
+    .modal-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .modal-actions .btn { padding:12px; font-size:0.95rem; width:100%; justify-content:center; }
+    .btn-goback  { background:transparent; border:var(--border); color:var(--black); }
+    .btn-confirm { background:var(--salmon); border:var(--border); color:var(--black); box-shadow:var(--shadow); }
+    .btn-confirm:active { transform:translateY(2px); box-shadow:none; }
+
+    /* ── REVEAL OVERLAY ──────────────────────── */
+    .reveal-overlay {
+      display:none; position:absolute; inset:0;
+      background:rgba(20,130,180,0.88); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      align-items:center; justify-content:center; z-index:40;
+      animation:backdropIn 0.3s ease both;
+    }
+    .reveal-overlay.show { display:flex; }
+    .reveal-text {
+      font-family:var(--font-display); font-size:2rem; color:var(--white);
+      text-shadow:3px 3px 0 var(--black); text-align:center; line-height:1.35; padding:24px;
+      animation:modalSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    /* ── QUAL RESULT ─────────────────────────── */
+    #view-qual-result { align-items:center; justify-content:center; gap:16px; padding:40px 24px; text-align:center; flex:1; min-height:0; }
+    .qual-result-icon { font-size:4rem; line-height:1; animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .qual-result-title { font-family:var(--font-display); font-size:2.8rem; color:var(--white); text-shadow:4px 4px 0 var(--black); animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.05s both; }
+    .qual-score-display { font-family:var(--font-display); font-size:1.6rem; color:var(--black); animation:fadeSlideIn 0.4s ease 0.15s both; }
+    .qual-wait-msg { font-family:var(--font-display); font-size:0.95rem; color:rgba(0,0,0,0.6); animation:fadeSlideIn 0.4s ease 0.25s both; }
+
+    /* ── QUAL TRANSITION ─────────────────────── */
+    #view-qual-transition { align-items:center; justify-content:center; gap:18px; padding:40px 24px; text-align:center; flex:1; min-height:0; }
+    .qt-icon  { font-size:4rem; line-height:1; animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both; }
+    .qt-title { font-family:var(--font-display); font-size:2.4rem; color:var(--white); text-shadow:4px 4px 0 var(--black); animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both; }
+    .qt-sub   { font-family:var(--font-display); font-size:1.1rem; color:var(--black); animation:fadeSlideIn 0.4s ease 0.25s both; }
+    .qt-score { font-family:var(--font-display); font-size:2rem; color:var(--white); text-shadow:3px 3px 0 var(--black); animation:fadeSlideIn 0.4s ease 0.3s both; }
+
+    /* ── CORRECT ─────────────────────────────── */
+    #view-correct { gap:20px; padding:40px 24px; text-align:center; flex:1; min-height:0; align-items:center; justify-content:center; }
+    .correct-title { font-family:var(--font-display); font-size:4rem; color:var(--white); text-shadow:4px 4px 0 var(--black); animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .next-round-msg  { font-family:var(--font-display); font-size:1.2rem; color:var(--black); }
+    .next-round-time { font-family:var(--font-display); font-size:3rem; color:var(--white); text-shadow:3px 3px 0 var(--black); }
+
+    /* ── WRONG (mindfield elimination) ──────── */
+    #view-wrong { gap:24px; padding:40px 24px; text-align:center; flex:1; min-height:0; align-items:center; justify-content:center; }
+    .wrong-title { font-family:var(--font-display); font-size:4rem; color:var(--white); text-shadow:4px 4px 0 rgba(0,0,0,0.35); animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .wrong-sub   { font-family:var(--font-display); font-size:1.3rem; color:var(--white); text-shadow:1px 1px 0 rgba(0,0,0,0.2); }
+    #view-wrong .btn-outline { background: var(--salmon); color:var(--white); text-shadow: var(--text-shadow-1); max-width:220px; }
+
+    /* ── WINNER ──────────────────────────────── */
+    #view-winner { gap:16px; padding:40px 24px; text-align:center; flex:1; min-height:0; align-items:center; justify-content:center; }
+    .trophy       { font-size:5rem; line-height:1; animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both; }
+    .winner-title { font-family:var(--font-display); font-size:4rem; color:var(--white); text-shadow:4px 4px 0 var(--black); animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.2s both; }
+    .winner-sub   { font-family:var(--font-display); font-size:1.1rem; color:var(--black); animation:fadeSlideIn 0.4s ease 0.35s both; }
+    #view-winner .btn-outline { max-width:220px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="topNav">
+    <div class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt=""/>
+      <span class="logo-text">MiND FiELD</span>
+    </div>
+    <div class="player-count" id="playerCount"></div>
+  </nav>
+
+  <!-- LOBBY -->
+  <div id="view-lobby" class="view active">
+    <div class="room-title" id="roomTitle">Loading...</div>
+    <div class="player-card">
+      <div class="players-title">Players</div>
+      <div id="lobbyPlayerList"></div>
+    </div>
+    <div class="countdown-bar" id="countdownBar"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()" style="max-width:200px;align-self:center;">Leave Room</button>
+  </div>
+
+  <!-- QUESTION -->
+  <div id="view-question" class="view">
+    <div class="timer-row">
+      <div class="timer-num" id="timerNum">15</div>
+      <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+    </div>
+    <div class="question-card">
+      <div class="question-num"  id="questionNum">Question #1</div>
+      <div class="question-text" id="questionText"></div>
+    </div>
+    <div class="choices-list" id="choicesList"></div>
+
+    <!-- Confirm modal -->
+    <div class="modal-backdrop" id="confirmModal">
+      <div class="modal-card">
+        <div class="modal-question">Your answer:</div>
+        <div class="modal-selected-answer" id="modalAnswerText"></div>
+        <div class="modal-actions">
+          <button class="btn btn-goback"  onclick="goBack()">Go Back</button>
+          <button class="btn btn-confirm" onclick="confirmAnswer()">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reveal overlay -->
+    <div class="reveal-overlay" id="revealIntroOverlay">
+      <div class="reveal-text">And the correct<br/>answer is...</div>
+    </div>
+  </div>
+
+  <!-- QUAL RESULT (brief correct/wrong during qual — no elimination) -->
+  <div id="view-qual-result" class="view">
+    <div class="qual-result-icon" id="qualResultIcon">✓</div>
+    <div class="qual-result-title" id="qualResultTitle">Correct!</div>
+    <div class="qual-score-display" id="qualScoreDisplay"></div>
+    <div class="qual-wait-msg">Next question coming up...</div>
+  </div>
+
+  <!-- QUAL TRANSITION (qualified / not qualified) -->
+  <div id="view-qual-transition" class="view">
+    <div class="qt-icon"  id="qtIcon">🎯</div>
+    <div class="qt-title" id="qtTitle">You Qualified!</div>
+    <div class="qt-score" id="qtScore"></div>
+    <div class="qt-sub"   id="qtSub">Advancing to Mind Field...</div>
+    <button class="btn btn-outline" id="qtLeaveBtn" onclick="leaveRoom()" style="display:none;max-width:220px;">Leave Room</button>
+  </div>
+
+  <!-- CORRECT (mindfield) -->
+  <div id="view-correct" class="view">
+    <div class="correct-title">Correct!</div>
+    <div class="next-round-msg">Next round starts in...</div>
+    <div class="next-round-time" id="nextRoundTime">8</div>
+  </div>
+
+  <!-- WRONG (mindfield elimination) -->
+  <div id="view-wrong" class="view">
+    <div class="wrong-title">Wrong!</div>
+    <div class="wrong-sub">Try again next round.</div>
+    <button class="btn btn-outline" onclick="leaveRoom()">Leave Room</button>
+  </div>
+
+  <!-- WINNER -->
+  <div id="view-winner" class="view">
+    <div class="trophy">🏆</div>
+    <div class="winner-title">Winner!</div>
+    <div class="winner-sub" id="winnerSub"></div>
+    <button class="btn btn-outline" onclick="leaveRoom()">Leave Room</button>
+  </div>
+
+  <!-- ERROR -->
+  <div id="view-error" class="view">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title">Oops!</div>
+    <div class="error-msg" id="errorMsg"></div>
+    <button class="btn btn-outline" onclick="window.location.href='/player/index.html'">Try Again</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const roomKey  = sessionStorage.getItem('mf_room_key');
+    const roomName = sessionStorage.getItem('mf_room_name');
+    const nickname = sessionStorage.getItem('mf_nickname');
+
+    if (!roomKey || !nickname) window.location.href = '/player/index.html';
+    document.getElementById('roomTitle').textContent = roomName || '';
+
+    let pendingIndex   = null;
+    let selectedAnswer = null;
+    let currentChoices = [];
+    let currentPhase   = 'qualification';
+    let isEliminated   = false;
+    let totalStarted   = 0;
+    let myQualScore    = 0;
+
+    const ALL_VIEWS = ['view-lobby','view-question','view-qual-result','view-qual-transition','view-correct','view-wrong','view-winner','view-error'];
+
+    const socket = io();
+    const playerToken = localStorage.getItem('mf_player_token') || null;
+    socket.emit('player:join', { roomKey, nickname, playerToken });
+
+    socket.on('player:join-error', ({ message }) => {
+      showError(message);
+    });
+
+    socket.on('player:joined', ({ playerCount }) => {
+      if (!totalStarted) totalStarted = playerCount;
+      document.getElementById('playerCount').textContent = `${playerCount}/${playerCount}`;
+    });
+
+    socket.on('room:update', ({ players, activeCount, total, totalStarted: ts }) => {
+      if (ts && ts > totalStarted) totalStarted = ts;
+      const denom = totalStarted || total;
+      document.getElementById('playerCount').textContent = `${activeCount}/${denom}`;
+      renderLobbyList(players);
+    });
+
+    socket.on('game:countdown', ({ seconds }) => {
+      document.getElementById('countdownBar').textContent =
+        seconds > 0 ? `Game starting in ${seconds}...` : 'Get ready!';
+    });
+
+    // ── New question ──────────────────────────
+    socket.on('game:question', ({ phase, round, totalRounds, question, choices, playerScore }) => {
+      if (isEliminated) return;
+
+      currentPhase   = phase;
+      pendingIndex   = null;
+      selectedAnswer = null;
+      currentChoices = choices;
+
+      if (playerScore !== undefined) myQualScore = playerScore;
+
+      showView('view-question');
+      document.getElementById('revealIntroOverlay').classList.remove('show');
+      document.getElementById('confirmModal').classList.remove('show');
+
+      // Reset timer bar to full at start of each question
+      // Reset timer bar — snap to full, then allow ticks to animate
+      const fillReset = document.getElementById('timerFill');
+      if (fillReset) {
+        fillReset.style.transition = 'none';
+        fillReset.style.width = '100%';
+        fillReset.style.background = '#F4AAAA';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          fillReset.style.transition = 'width 1s linear, background 1s linear';
+        }));
+      }
+      document.getElementById('timerNum').textContent = 15;
+      document.getElementById('timerNum').style.color = 'var(--black)';
+
+      document.getElementById('questionNum').textContent  =
+        phase === 'qualification' ? `Question ${round}/${totalRounds}` : `Question #${round}`;
+      document.getElementById('questionText').textContent = question;
+
+      document.getElementById('choicesList').innerHTML = choices.map((c, i) =>
+        `<button class="choice-btn" id="choice-${i}" onclick="tapAnswer(${i})">${esc(c)}</button>`
+      ).join('');
+    });
+
+    // ── Tap → confirm modal ───────────────────
+    function tapAnswer(index) {
+      if (selectedAnswer !== null) return;
+      pendingIndex = index;
+      document.getElementById('modalAnswerText').textContent = currentChoices[index];
+      document.getElementById('confirmModal').classList.add('show');
+    }
+    function goBack() {
+      pendingIndex = null;
+      document.getElementById('confirmModal').classList.remove('show');
+    }
+    function confirmAnswer() {
+      if (pendingIndex === null) return;
+      selectedAnswer = currentChoices[pendingIndex];
+      document.getElementById('confirmModal').classList.remove('show');
+      currentChoices.forEach((_, i) => {
+        const btn = document.getElementById(`choice-${i}`);
+        if (!btn) return;
+        if (i === pendingIndex) btn.classList.add('selected');
+        btn.disabled = true;
+      });
+      socket.emit('player:answer', { roomKey, answer: selectedAnswer });
+    }
+
+    // ── Reveal intro overlay ──────────────────
+    socket.on('game:reveal-intro', () => {
+      if (isEliminated) return;
+      document.getElementById('confirmModal').classList.remove('show');
+      showView('view-question');
+      document.getElementById('revealIntroOverlay').classList.add('show');
+    });
+
+    // ── Reveal correct answer ─────────────────
+    socket.on('game:reveal', ({ correctAnswer }) => {
+      if (isEliminated) return;
+      document.getElementById('revealIntroOverlay').classList.remove('show');
+      showView('view-question');
+      currentChoices.forEach((c, i) => {
+        const btn = document.getElementById(`choice-${i}`);
+        if (!btn) return;
+        btn.disabled = true;
+        btn.classList.remove('selected');
+        btn.classList.toggle('correct', c === correctAnswer);
+        btn.classList.toggle('wrong',   c !== correctAnswer);
+      });
+    });
+
+    // ── Qual result (per-question, no elimination) ──
+    socket.on('game:qual-result', ({ result, score, round, totalRounds }) => {
+      myQualScore = score;
+      const isLast = round >= totalRounds;
+
+      // Always show result screen — last question transitions to qual-end screen
+      document.getElementById('qualResultIcon').textContent  = result === 'correct' ? '✓' : '✗';
+      document.getElementById('qualResultTitle').textContent = result === 'correct' ? 'Correct!'   : 'Incorrect!';
+      document.getElementById('qualResultTitle').style.color = result === 'correct' ? 'var(--white)' : '#fff';
+      document.getElementById('qualScoreDisplay').textContent = `${score} / ${round} correct`;
+      showView('view-qual-result');
+      // game:qualification-end will override this view when it arrives
+    });
+
+    // ── Qualification ended ───────────────────
+    socket.on('game:qualification-end', ({ qualifiers, threshold, allScores }) => {
+      const qualified = qualifiers.some(q => q.nickname === nickname);
+      const myScore   = allScores.find(s => s.nickname === nickname)?.score ?? myQualScore;
+
+      document.getElementById('qtIcon').textContent  = qualified ? '🎯' : '😔';
+      document.getElementById('qtTitle').textContent = qualified ? 'You Qualified!' : 'Not This Time';
+      document.getElementById('qtScore').textContent = `${myScore} / 10 correct`;
+      document.getElementById('qtSub').textContent   = qualified
+        ? 'Advancing to Mind Field...'
+        : `Needed ${threshold}+ correct to advance`;
+
+      // Show Leave Room button for eliminated players
+      document.getElementById('qtLeaveBtn').style.display = qualified ? 'none' : 'block';
+      showView('view-qual-transition');
+    });
+
+    socket.on('game:mindfield-start', () => {
+      // Non-qualifiers: show Leave Room for 4 seconds then auto-redirect
+      const leaveBtn = document.getElementById('qtLeaveBtn');
+      if (leaveBtn && leaveBtn.style.display !== 'none') {
+        // Player did not qualify — auto-redirect after 4s
+        document.getElementById('qtSub').textContent = 'Redirecting you in a moment...';
+        setTimeout(() => {
+          leaveRoom();
+        }, 4000);
+      }
+      // Qualified players will receive game:question shortly — no action needed
+    });
+
+    // ── Mind Field personal result ────────────
+    socket.on('player:result', ({ result, nextRoundIn }) => {
+      if (result === 'correct') {
+        showView('view-correct');
+        document.getElementById('nextRoundTime').textContent = nextRoundIn;
+      } else {
+        isEliminated = true;
+        showView('view-wrong');
+        setTimeout(() => leaveRoom(), 4000);
+      }
+    });
+
+    socket.on('game:break', ({ seconds }) => {
+      const el = document.getElementById('nextRoundTime');
+      if (el) el.textContent = seconds;
+    });
+
+    socket.on('player:winner', ({ totalPlayers, outlasted }) => {
+      const denom = totalStarted || totalPlayers;
+      showView('view-winner');
+      document.getElementById('playerCount').textContent = `1/${denom}`;
+      document.getElementById('winnerSub').textContent =
+        `You outlasted ${outlasted} player${outlasted !== 1 ? 's' : ''}`;
+      setTimeout(() => leaveRoom(), 4000);
+    });
+
+    socket.on('game:end', ({ winner }) => {
+      // Only act if the player isn't already on a terminal screen
+      const terminal = ['view-wrong', 'view-winner'];
+      const current  = ALL_VIEWS.find(v => document.getElementById(v)?.classList.contains('active'));
+      if (terminal.includes(current)) return;
+      // If no winner, show a neutral message on the correct/waiting screen
+      if (!winner) {
+        // Re-use the correct view but with custom message
+        document.querySelector('#view-correct .correct-title').textContent   = 'Game Over';
+        document.querySelector('#view-correct .next-round-msg').textContent  = 'No one survived the Mind Field.';
+        document.querySelector('#view-correct .next-round-time').textContent = '';
+        showView('view-correct');
+      }
+    });
+
+    socket.on('room:cancelled', () => window.location.href = '/player/index.html');
+
+    function showError(message) {
+      document.getElementById('errorMsg').textContent = message;
+      showView('view-error');
+    }
+
+    // Timer bar helper
+    function updateTimerBar(timeLeft, total) {
+      const fill = document.getElementById('timerFill');
+      const num  = document.getElementById('timerNum');
+      if (!fill || !num) return;
+      const pct = (timeLeft / total) * 100;
+      fill.style.width = pct + '%';
+      num.textContent = timeLeft;
+    }
+
+    socket.on('game:timer', ({ timeLeft }) => {
+      updateTimerBar(timeLeft, 15);
+    });
+
+    function leaveRoom() {
+      socket.emit('player:leave', { roomKey });
+      sessionStorage.removeItem('mf_room_key');
+      sessionStorage.removeItem('mf_room_name');
+      sessionStorage.removeItem('mf_nickname');
+      window.location.href = '/player/index.html';
+    }
+
+    function showView(id) {
+      ALL_VIEWS.forEach(v => {
+        document.getElementById(v).classList.toggle('active', v === id);
+      });
+      document.body.style.background =
+        (id === 'view-wrong') ? 'var(--out-red)' : 'var(--sky)';
+      document.getElementById('topNav').style.display = 'flex';
+    }
+
+    function renderLobbyList(players) {
+      const el = document.getElementById('lobbyPlayerList');
+      if (!players || !players.length) {
+        el.innerHTML = '<div class="player-item" style="color:#666;font-style:italic">Waiting...</div>';
+        return;
+      }
+      el.innerHTML = players.map(p => `
+        <div class="player-item">
+          ${esc(p.nickname)}
+          ${p.nickname === nickname ? '<span class="me-tag">you</span>' : ''}
+        </div>`).join('');
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

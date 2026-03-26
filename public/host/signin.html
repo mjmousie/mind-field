@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mind Field — Host Sign In</title>
+  <link rel="stylesheet" href="/shared/style.css"/>
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+    .signin-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+    .signin-card { width:100%; max-width:440px; }
+    .signin-card .btn-primary { width:100%; margin-top:8px; padding:12px; font-size:1rem; }
+    .signup-link { margin-top:16px; text-align:center; font-weight:700; font-size:0.95rem; }
+    .signup-link a { color:var(--black); text-decoration:none; }
+    .signup-link a:hover { text-decoration:underline; }
+    .google-btn {
+      width:100%; padding:12px; border:var(--border); border-radius:var(--radius-pill);
+      background:var(--white); font-family:var(--font-body); font-weight:800;
+      font-size:0.95rem; cursor:pointer; display:flex; align-items:center;
+      justify-content:center; gap:10px; transition:box-shadow 0.15s; margin-bottom:4px;
+    }
+    .google-btn:hover { box-shadow:var(--shadow); }
+    .google-btn img { width:20px; height:20px; }
+    .divider { display:flex; align-items:center; gap:10px; margin:8px 0; }
+    .divider span { font-size:0.8rem; font-weight:700; color:rgba(0,0,0,0.4); }
+    .divider::before, .divider::after { content:''; flex:1; height:1px; background:rgba(0,0,0,0.15); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/host/signin.html" class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt="Mind Field"/>
+      <span class="logo-text">MiND FiELD</span>
+    </a>
+  </nav>
+
+  <div class="signin-wrap">
+    <h1 class="page-title">Host Sign In</h1>
+
+    <div class="card signin-card">
+      <div id="msg" class="msg"></div>
+      <div class="input-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="" autocomplete="email"/>
+      </div>
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="" autocomplete="current-password"/>
+      </div>
+
+      <button class="btn btn-primary w-full" id="signinBtn" onclick="signIn()">Sign In</button>
+    <div class="divider"><span>or</span></div>
+      <div id="googleBtnContainer" style="display:flex;justify-content:center;margin-bottom:4px;"></div>
+    </div>
+
+    <div class="signup-link">
+      <a href="/host/register.html">Sign Up</a>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    const GOOGLE_CLIENT_ID = '855545584453-litp7t3l02m0nlathu7dv72ms5it17l5.apps.googleusercontent.com';
+
+    if (localStorage.getItem('mf_token')) {
+      window.location.href = '/host/dashboard.html';
+    }
+
+    function initGoogleButton() {
+      if (!window.google) return;
+      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+      google.accounts.id.renderButton(
+        document.getElementById('googleBtnContainer'),
+        { theme: 'outline', size: 'large', width: 380, text: 'signin_with' }
+      );
+    }
+    if (window.google) initGoogleButton();
+    else window.addEventListener('load', initGoogleButton);
+
+    async function handleGoogleCredential(response) {
+      const msg = document.getElementById('msg');
+      try {
+        const res  = await fetch('/api/host/google', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        localStorage.setItem('mf_token', data.token);
+        localStorage.setItem('mf_host',  JSON.stringify(data.host));
+        window.location.href = '/host/dashboard.html';
+      } catch (e) {
+        msg.className = 'msg error'; msg.textContent = e.message;
+      }
+    }
+
+    async function signIn() {
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const msg      = document.getElementById('msg');
+      const btn      = document.getElementById('signinBtn');
+
+      msg.className = 'msg'; msg.textContent = '';
+      if (!email || !password) { msg.className = 'msg error'; msg.textContent = 'Please enter your email and password.'; return; }
+
+      btn.disabled = true; btn.textContent = 'Signing in...';
+      try {
+        const res  = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Sign in failed');
+        localStorage.setItem('mf_token', data.token);
+        localStorage.setItem('mf_host',  JSON.stringify(data.host));
+        window.location.href = '/host/dashboard.html';
+      } catch (e) {
+        msg.className = 'msg error'; msg.textContent = e.message;
+        btn.disabled = false; btn.textContent = 'Sign In';
+      }
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
+  </script>
+</body>
+</html>

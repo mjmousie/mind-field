@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mind Field — Game Room</title>
+  <link rel="stylesheet" href="/shared/style.css"/>
+  <link rel="stylesheet" href="/public/host/css/cancelModal.css">
+  <link rel="stylesheet" href="/public/host/css/gameRoom.css">
+</head>
+<style>
+      html, body { width:100%; height:100%; overflow:hidden; font-size:18px; }
+    body { display:flex; flex-direction:column; }
+
+    /* ── HEADER ──────────────────────────────── */
+    .game-header {
+      padding:10px 24px 6px; flex-shrink:0;
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .header-nav {
+      display:flex; align-items:center;
+    }
+    .header-logo-wrap {
+      display:flex; align-items:center; gap:8px; text-decoration:none;
+    }
+    .header-logo { width:44px; height:44px; flex-shrink:0; }
+    .header-logo-text {
+      font-family:var(--font-display); font-size:1.5rem;
+      color:var(--black); letter-spacing:0.5px;
+    }
+    .header-title-wrap {
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    }
+    .header-fs-wrap { position:relative; display:flex; align-items:center; flex-shrink:0; }
+    .fs-btn { background:none; border:none; cursor:pointer; font-size:1.6rem; line-height:1; color:var(--black); padding:4px 8px; border-radius:var(--radius-sm); transition:background 0.15s; }
+    .fs-btn:hover { background:rgba(0,0,0,0.1); }
+    .fs-tooltip { display:none; position:absolute; top:calc(100% + 6px); right:0; background:var(--black); color:var(--white); font-size:0.75rem; font-weight:700; padding:5px 10px; border-radius:var(--radius-sm); white-space:nowrap; pointer-events:none; z-index:999; }
+    .header-fs-wrap:hover .fs-tooltip { display:block; }
+    .game-title {
+      font-family:var(--font-display); font-size:3rem;
+      color:var(--white); text-shadow: var(--text-shadow-2); line-height:1.1;
+    }
+    .badge-row { display:flex; gap:10px; align-items:center; margin: 12px 0; }
+    .category-badge {
+      display:inline-block; background:var(--salmon);
+      border:none; border-radius:var(--radius-pill);
+      padding:8px 24px; font-weight:800; font-size:0.8rem;
+      color: var(--white); text-shadow:var(--text-shadow-1);
+    }
+    .phase-badge {
+      display:inline-block; background:var(--sky-card);
+      border:none; border-radius:var(--radius-pill);
+      padding:8px 24px; font-weight:800; font-size:0.8rem;
+      color: var(--white); text-shadow:var(--text-shadow-1);
+    }
+
+    /* ── 3-COLUMN BODY ───────────────────────── */
+    .game-body {
+      flex:1; display:grid;
+      grid-template-columns:260px 1fr 220px;
+      gap:16px; padding:8px 20px 20px; min-height:0;
+    }
+
+    /* ── SIDEBAR ─────────────────────────────── */
+    .sidebar {
+      background:var(--sky-card); border:none;
+      border-radius:var(--radius-md); padding:14px 16px;
+      overflow-y:auto; display:flex; flex-direction:column;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+    }
+    .sidebar::-webkit-scrollbar { display:none; }
+    .sidebar-title { font-weight:800; font-size:1.2rem; margin-bottom:10px; flex-shrink:0; color: white; text-shadow: var(--text-shadow-1); }
+    .player-item { font-size:0.9rem; font-weight:600; padding:5px 0; color: white; text-shadow: 1px 1px 0 var(--black); display:flex; justify-content:space-between; align-items:center; }
+    .player-item.out .p-name { color:rgba(255, 255, 255, 0.4); }
+    .out-tag { color:black; font-weight:800; font-size:0.78rem; margin-left:4px; }
+    .p-score { font-weight:800; font-size:0.85rem; background:var(--salmon); border:1px solid #111; border-radius:var(--radius-pill); padding:1px 8px; }
+
+    /* ── MAIN PANEL ──────────────────────────── */
+    .main-panel {
+      background:var(--sky-card); border:none;
+      border-radius:var(--radius-md); padding:20px 28px;
+      position:relative; display:flex; flex-direction:column; min-height:0;
+    }
+
+    /* ── RIGHT PANEL ─────────────────────────── */
+    .right-panel { display:flex; flex-direction:column; gap:14px; }
+    /* ── Error toast ─────────────────────────── */
+    .error-toast {
+      position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px);
+      background:var(--out-red); color:var(--white);
+      font-family:var(--font-body); font-weight:800; font-size:0.95rem;
+      padding:12px 28px; border-radius:var(--radius-pill);
+      border:var(--border); box-shadow:var(--shadow);
+      opacity:0; pointer-events:none;
+      transition:opacity 0.3s, transform 0.3s;
+      z-index:500; white-space:nowrap;
+    }
+    .error-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    .info-box { background:var(--sky-card); border-radius:var(--radius-md); padding:12px 16px; text-align: center; }
+    .info-box-label { font-weight:800; font-size:1.2rem; margin-bottom:4px; color: white; text-shadow: var(--text-shadow-1); }
+    .info-box-value { font-weight:900; font-size:1.5rem; color:var(--white); text-shadow: 2px 2px 0 var(--black); }
+    /* ── Circular countdown timer ───────────── */
+    .timer-wrap {
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+    }
+    .timer-svg-wrap {
+      position:relative; width:120px; height:120px; margin:0 auto;
+    }
+    .timer-svg {
+      width:120px; height:120px;
+      transform:rotate(-90deg);
+    }
+    .timer-track {
+      fill:none; stroke:rgba(0,0,0,0.12); stroke-width:8;
+    }
+    .timer-arc {
+      fill:none; stroke:#F4AAAA; stroke-width:8;
+      stroke-linecap:round;
+      stroke-dasharray:263.9;
+      stroke-dashoffset:0;
+      transition:stroke-dashoffset 0.9s linear;
+    }
+    .timer-number {
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      font-family:var(--font-display); font-size:2.3rem;
+      color:var(--white); text-shadow:var(--text-shadow-1);
+    }
+
+    /* ── PREVIEW ─────────────────────────────── */
+    .join-label { font-weight:800; font-size:1.2rem; margin-bottom:10px; color: white; text-shadow: var(--text-shadow-1); }
+    .qr-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+    .qr-wrap img { width:220px; height:220px; border:var(--border); border-radius:var(--radius-sm); background:#fff; }
+    .join-instructions { text-align:center; font-weight:800; font-size:2rem; line-height:1.6; margin-top: 32px; }
+    .room-key-display { font-family:var(--font-display); font-size:3rem; color:var(--white); text-shadow: var(--text-shadow-2); letter-spacing:6px; }
+    .preview-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:10px; flex-shrink:0; }
+    .preview-actions .btn { font-size:1rem; padding:12px 32px; }
+
+    /* ── QUESTION ────────────────────────────── */
+    .question-label { font-weight:800; font-size:1.1rem; margin-bottom:10px; flex-shrink:0; color:var(--white); text-shadow: var(--text-shadow-1); }
+    .question-text { font-family:var(--font-display); font-size:3.04rem; line-height:1.25; flex:1; overflow-y:auto; text-align:center; color:var(--white); text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; display:flex; align-items:center; justify-content:center; }
+    .choices-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; flex-shrink:0; }
+    .choice-btn {
+      padding:14px 20px; border:var(--border); border-radius:var(--radius-pill);
+      font-family:var(--font-body); font-weight:700; font-size:1.3rem;
+      text-align:center; background:var(--salmon); color:var(--black);
+      transition: background 0.3s;
+    }
+    .choice-btn.correct { background:var(--salmon); border: 8px solid var(--black); }
+    .choice-btn.wrong   { background:var(--black); color:var(--white); }
+
+    /* ── REVEAL INTRO OVERLAY ────────────────── */
+    @keyframes backdropIn  { from{opacity:0} to{opacity:1} }
+    @keyframes revealPop   { from{opacity:0;transform:scale(0.88) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+
+    .reveal-intro-overlay {
+      display:none; position:absolute; inset:0; border-radius:var(--radius-md);
+      background:rgba(20,130,180,0.82); backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      align-items:center; justify-content:center; z-index:20;
+      animation:backdropIn 0.3s ease both;
+    }
+    .reveal-intro-overlay.show { display:flex; }
+    .reveal-intro-text {
+      font-family:var(--font-display); font-size:2.8rem;
+      color:var(--white); text-shadow:3px 3px 0 var(--black);
+      text-align:center; line-height:1.35; padding:24px;
+      animation:revealPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    /* ── NEXT ROUND OVERLAY ──────────────────── */
+    .next-round-overlay {
+      display:none; position:absolute; inset:0; border-radius:var(--radius-md);
+      background:rgba(30,30,30,0.45); align-items:center; justify-content:center; z-index:10;
+    }
+    .next-round-overlay.show { display:flex; }
+    .next-round-circle {
+      width:260px; height:260px; border-radius:50%; background:var(--sky);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:4px;
+    }
+    .next-round-label { font-family:var(--font-display); font-size:1.2rem; color:var(--black); }
+    .next-round-timer { font-family:var(--font-display); font-size:4.5rem; color:var(--black); text-shadow:2px 2px 0 rgba(0,0,0,0.15); line-height:1; }
+
+    /* ── TRANSITION OVERLAY ──────────────────── */
+    @keyframes fadeSlideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+    .transition-overlay {
+      display:none; position:fixed; inset:0; z-index:200;
+      background:rgba(15,100,145,0.92); backdrop-filter:blur(12px);
+      -webkit-backdrop-filter:blur(12px);
+      flex-direction:column; align-items:center; justify-content:center; gap:20px;
+      animation:backdropIn 0.4s ease both;
+    }
+    .transition-overlay.show { display:flex; }
+    .transition-title {
+      font-family:var(--font-display); font-size:2.8rem;
+      color:var(--white); text-shadow:3px 3px 0 var(--black);
+      text-align:center;
+      animation:revealPop 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;
+    }
+    .transition-subtitle {
+      font-family:var(--font-display); font-size:1.2rem;
+      color:rgba(255,255,255,0.85); text-align:center;
+      text-shadow: var(text-shadow);
+    }
+    .qualifier-list {
+      display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
+      max-width:700px; padding:0 20px;
+    }
+    .qualifier-chip {
+      background:var(--salmon); border:var(--border); border-radius:var(--radius-pill);
+      padding:8px 20px; font-weight:800; font-size:1rem;
+      animation:fadeSlideIn 0.3s ease both;
+    }
+    .transition-countdown {
+      font-family:var(--font-display); font-size:1.4rem;
+      color:rgba(255,255,255,0.8); margin-top:10px;
+    }
+
+    /* ── END SCREEN ──────────────────────────── */
+    .winner-label-sm { font-weight:800; font-size:1rem; align-self:flex-start; flex-shrink:0; }
+    .winner-panel { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+    .winner-congrats { font-family:var(--font-display); font-size:2.4rem; }
+    .winner-name { font-family:var(--font-display); font-size:3.2rem; color:var(--white); text-shadow: var(--text-shadow-2); }
+    .new-game-msg { font-family:var(--font-display); font-size:1.3rem; margin-top:16px; }
+
+    /* ── PROMOTIONS BANNER ──────────────────── */
+    @keyframes promoBannerIn {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .promo-box {
+      background:var(--sky-card); border:none;
+      border-radius:var(--radius-md); padding:16px 16px 14px;
+      flex:1;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:space-between;
+      text-align:center; overflow:hidden;
+      min-height:0; gap:0;
+    }
+    /* Top: HOST / VENUE label */
+    .promo-type-label {
+      font-size:1rem; font-weight:800; text-transform:uppercase;
+      letter-spacing:2px; color:rgba(0,0,0,0.5);
+      flex-shrink:0;
+      display: none;
+    }
+    /* Middle: centred content */
+    .promo-inner {
+      flex:1;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:10px; width:100%; padding:10px 0;
+    }
+    .promo-headline {
+      font-family:var(--font-display); font-size:2rem;
+      color:var(--white); text-shadow:2px 2px 0 var(--black);
+      line-height:1.1;
+      margin-bottom: 16px;
+    }
+    .promo-days {
+      font-size:1.2rem; font-weight:700;
+      color:rgba(0,0,0,0.6); line-height:1.2;
+    }
+    .promo-time {
+      font-size:1.2rem; font-weight:700;
+      color:rgba(0,0,0,0.6); line-height:1.2;
+    }
+    .promo-desc {
+      font-size:1.3rem; font-weight:700; color:var(--black);
+      line-height:1.3;
+      margin-top: 16px;
+    }
+    /* Bottom: dots */
+    .promo-dots {
+      display:flex; gap:6px; justify-content:center;
+      flex-shrink:0; padding-top:6px;
+    }
+    .promo-dot {
+      width:9px; height:9px; border-radius:50%;
+      background:rgba(0,0,0,0.2); transition:background 0.3s; flex-shrink:0;
+    }
+    .promo-dot.active { background:var(--salmon); }
+    .promo-slide { animation: promoBannerIn 0.45s ease both; }
+
+    /* ── PRE-GAME COUNTDOWN ──────────────────── */
+    .countdown-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.6);
+      display:none; flex-direction:column; align-items:center; justify-content:center; z-index:100;
+    }
+    .countdown-text { font-family:var(--font-display); font-size:1.8rem; color:var(--white); text-shadow:2px 2px 0 #000; margin-bottom:10px; }
+    .countdown-number { font-family:var(--font-display); font-size:9rem; color:var(--white); text-shadow:5px 5px 0 #000; line-height:1; }
+
+    /* ── QUAL PROGRESS BAR ───────────────────── */
+    .qual-progress {
+      display:flex; gap:6px; margin-bottom:12px; flex-shrink:0;
+    }
+    .qual-pip {
+      flex:1; height:8px; border-radius:4px; background:rgba(0,0,0,0.2);
+      border:1px solid rgba(0,0,0,0.15); transition:background 0.3s;
+    }
+    .qual-pip.done    { background:var(--salmon); }
+    .qual-pip.current { background:var(--white); }
+</style>
+<body>
+  <div class="game-header">
+    <div class="header-nav">
+      <div class="header-logo-wrap">
+        <img src="/shared/brain.svg" class="header-logo" alt=""/>
+        <span class="header-logo-text">MiND FiELD</span>
+      </div>
+      <div class="header-title-wrap">
+        <div class="game-title" id="headerTitle">Loading...</div>
+        <div class="badge-row">
+          <div class="category-badge" id="headerCategory"></div>
+          <div class="phase-badge"    id="phaseBadge">Qualification Round</div>
+        </div>
+      </div>
+      <div class="header-fs-wrap">
+        <button class="fs-btn" id="fsBtn" onclick="toggleFullscreen()">⛶</button>
+        <div class="fs-tooltip" id="fsTooltip">Full Screen</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ VIEW: PREVIEW ════════════════════════ -->
+  <div class="game-body" id="view-preview">
+    <div class="sidebar">
+      <div class="sidebar-title">Players</div>
+      <div id="preview-player-list"></div>
+    </div>
+    <div class="main-panel">
+      <div class="join-label">Join Room</div>
+      <div class="qr-wrap">
+        <img id="qrImage" src="" alt="QR Code"/>
+        <div class="join-instructions">
+          Scan the QR Code and use code<br/>
+          <span class="room-key-display" id="roomKeyDisplay"></span><br/>
+          to join the room
+        </div>
+      </div>
+      <div class="preview-actions">
+        <button class="btn btn-ghost" onclick="cancelRoom()">Cancel</button>
+        <button class="btn btn-primary" id="startBtn" onclick="startGame()">Start</button>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="info-box"><div class="info-box-label">Host</div><div class="info-box-value" id="hostNameDisplay"></div></div>
+      <div class="info-box"><div class="info-box-label">Venue</div><div class="info-box-value" id="venueDisplay"></div></div>
+      <div class="promo-box" id="promoBox">
+        <div class="promo-type-label" id="promoTypeLabel">Promotions</div>
+        <div class="promo-inner" id="promoInner">
+          <div class="promo-headline" id="promoHeadline" style="opacity:0.4;font-size:1.4rem">No promotions added yet</div>
+          <div class="promo-days"     id="promoDays"></div>
+          <div class="promo-time"     id="promoTime"></div>
+          <div class="promo-desc"     id="promoDesc"></div>
+        </div>
+        <div class="promo-dots" id="promoDots"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ VIEW: ACTIVE ROUND ═══════════════════ -->
+  <div class="game-body" id="view-active" style="display:none">
+    <div class="sidebar">
+      <div class="sidebar-title">Players</div>
+      <div id="active-player-list"></div>
+    </div>
+    <div class="main-panel" id="mainPanel">
+      <!-- Qualification progress pips (hidden during mindfield) -->
+      <div class="qual-progress" id="qualProgress"></div>
+      <div class="question-label" id="questionLabel">Question #1</div>
+      <div class="question-text"  id="questionText"></div>
+      <div class="choices-grid"   id="choicesGrid"></div>
+
+      <div class="reveal-intro-overlay" id="revealIntroOverlay">
+        <div class="reveal-intro-text">And the correct<br/>answer is...</div>
+      </div>
+      <div class="next-round-overlay" id="nextRoundOverlay">
+        <div class="next-round-circle">
+          <div class="next-round-label">Next round in...</div>
+          <div class="next-round-timer" id="nextRoundTimer">8</div>
+        </div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="info-box"><div class="info-box-label">Round</div><div class="info-box-value" id="roundDisplay">1</div></div>
+      <div class="info-box"><div class="info-box-label">Players Left</div><div class="info-box-value" id="playersLeftDisplay">—</div></div>
+      <div class="info-box">
+        <div class="info-box-label">Timer</div>
+        <div class="timer-wrap">
+          <div class="timer-svg-wrap">
+            <svg class="timer-svg" viewBox="0 0 96 96">
+              <circle class="timer-track" cx="48" cy="48" r="42"/>
+              <circle class="timer-arc"   cx="48" cy="48" r="42" id="timerArc"/>
+            </svg>
+            <div class="timer-number" id="timerDisplay">15</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ VIEW: END ════════════════════════════ -->
+  <div class="game-body" id="view-end" style="display:none">
+    <div class="sidebar">
+      <div class="sidebar-title">Players</div>
+      <div id="end-player-list"></div>
+    </div>
+    <div class="main-panel">
+      <div class="winner-label-sm">Winner</div>
+      <div class="winner-panel">
+        <div class="winner-congrats" id="winnerCongrats">Congratulations!</div>
+        <div class="winner-name"     id="winnerName"></div>
+        <div class="new-game-msg"    id="newGameMsg">You are the Mind Field Champion... or something</div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="info-box"><div class="info-box-label">Round</div><div class="info-box-value" id="endRoundDisplay">—</div></div>
+      <div class="info-box"><div class="info-box-label">Players</div><div class="info-box-value" id="endPlayersDisplay">—</div></div>
+      <div class="promo-box" id="promoBoxEnd">
+        <div class="promo-type-label" id="promoTypeLabelEnd">Promotions</div>
+        <div class="promo-inner" id="promoInnerEnd">
+          <div class="promo-headline" id="promoHeadlineEnd" style="opacity:0.4;font-size:1.4rem">No promotions added yet</div>
+          <div class="promo-days"     id="promoDaysEnd"></div>
+          <div class="promo-time"     id="promoTimeEnd"></div>
+          <div class="promo-desc"     id="promoDescEnd"></div>
+        </div>
+        <div class="promo-dots" id="promoDotsEnd"></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:0" onclick="exitGame()">Exit</button>
+    </div>
+  </div>
+
+  <!-- Pre-game countdown overlay -->
+  <div class="countdown-overlay" id="countdownOverlay">
+    <div class="countdown-text">Game starting in...</div>
+    <div class="countdown-number" id="countdownNumber">15</div>
+  </div>
+
+  <!-- Qualification → Mind Field transition overlay -->
+  <div class="transition-overlay" id="transitionOverlay">
+    <div class="transition-title">🧠 Advancing to Mind Field!</div>
+    <div class="transition-subtitle" id="transitionSubtitle"></div>
+    <div class="qualifier-list" id="qualifierList"></div>
+    <div class="transition-countdown" id="transitionCountdown"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const token    = localStorage.getItem('mf_token');
+    const hostData = JSON.parse(localStorage.getItem('mf_host') || '{}');
+    const roomData = JSON.parse(localStorage.getItem('mf_room') || '{}');
+
+    if (!token || !roomData.roomKey) window.location.href = '/host/dashboard.html';
+
+    let playerList   = [];
+    let totalPlayers = 0;
+    let totalStarted = 0;
+    let currentChoices = [];
+    let currentPhase   = 'qualification';
+    let currentRound   = 0;
+
+    document.getElementById('headerTitle').textContent     = roomData.roomName    || '';
+    document.getElementById('headerCategory').textContent  = roomData.categoryName || '';
+    document.getElementById('qrImage').src                 = roomData.qrCode      || '';
+    document.getElementById('roomKeyDisplay').textContent  = roomData.roomKey     || '';
+    document.getElementById('hostNameDisplay').textContent = hostData.displayName || '';
+    document.getElementById('venueDisplay').textContent    = roomData.location    || '';
+
+    const socket = io();
+    socket.emit('host:join-room', { roomKey: roomData.roomKey, token });
+
+    socket.on('room:update', ({ players, total, activeCount, totalStarted: ts }) => {
+      playerList   = players;
+      totalPlayers = total;
+      if (ts && ts > totalStarted) totalStarted = ts;
+      ['preview','active','end'].forEach(ctx => renderPlayerList(`${ctx}-player-list`, players));
+      const denom = totalStarted || total;
+      document.getElementById('playersLeftDisplay').textContent = `${activeCount}/${denom}`;
+    });
+
+    socket.on('game:countdown', ({ seconds }) => {
+      const o = document.getElementById('countdownOverlay');
+      o.style.display = 'flex';
+      document.getElementById('countdownNumber').textContent = seconds;
+      if (seconds === 0) o.style.display = 'none';
+    });
+
+    socket.on('game:question', ({ phase, round, totalRounds, question, choices, timer }) => {
+      currentPhase   = phase;
+      currentRound   = round;
+      currentChoices = choices;
+
+      document.getElementById('countdownOverlay').style.display = 'none';
+      document.getElementById('transitionOverlay').classList.remove('show');
+      showView('view-active');
+
+      // During MF round, always re-render full player list so OUT players stay visible
+      if (phase === 'mindfield') {
+        renderPlayerList('active-player-list', playerList);
+      }
+
+      // Phase badge
+      document.getElementById('phaseBadge').textContent =
+        phase === 'qualification'
+          ? `Qualification — Q${round}/${totalRounds}`
+          : `Mind Field — Round ${round}`;
+
+      document.getElementById('questionLabel').textContent = `Question #${round}`;
+      document.getElementById('questionText').textContent  = question;
+      document.getElementById('roundDisplay').textContent  = round;
+      
+      const arcReset = document.getElementById('timerArc');
+      if (arcReset) {
+        arcReset.style.transition = 'none';
+        arcReset.style.strokeDashoffset = '0';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          arcReset.style.transition = 'stroke-dashoffset 0.9s linear';
+        }));
+      }
+      document.getElementById('timerDisplay').textContent = timer;
+
+      document.getElementById('revealIntroOverlay').classList.remove('show');
+      document.getElementById('nextRoundOverlay').classList.remove('show');
+
+      // Qualification progress pips
+      const prog = document.getElementById('qualProgress');
+      if (phase === 'qualification') {
+        prog.style.display = 'flex';
+        prog.innerHTML = Array.from({ length: totalRounds }, (_, i) => {
+          const cls = i < round - 1 ? 'done' : i === round - 1 ? 'current' : '';
+          return `<div class="qual-pip ${cls}"></div>`;
+        }).join('');
+      } else {
+        prog.style.display = 'none';
+      }
+
+      document.getElementById('choicesGrid').innerHTML = choices.map(c =>
+        `<div class="choice-btn">${esc(c)}</div>`
+      ).join('');
+    });
+
+    socket.on('game:timer', ({ timeLeft }) => {
+      updateTimer(timeLeft, 15);
+    });
+
+    function updateTimer(timeLeft, total) {
+      const CIRCUMFERENCE = 263.9;
+      const arc   = document.getElementById('timerArc');
+      const numEl = document.getElementById('timerDisplay');
+      if (!arc || !numEl) return;
+
+      const progress = timeLeft / total;
+      arc.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+
+      // Light pink → red as time runs out
+      const r = Math.round(244 - (244 - 224) * (1 - progress));
+      const g = Math.round(170 - (170 -  68) * (1 - progress));
+      const b = Math.round(170 - (170 -  68) * (1 - progress));
+      numEl.textContent = timeLeft;
+    }
+
+    socket.on('game:reveal-intro', () => {
+      document.getElementById('revealIntroOverlay').classList.add('show');
+    });
+
+    socket.on('game:reveal', ({ correctAnswer }) => {
+      document.getElementById('revealIntroOverlay').classList.remove('show');
+      const btns = document.querySelectorAll('#choicesGrid .choice-btn');
+      btns.forEach((btn, i) => {
+        btn.classList.toggle('correct', currentChoices[i] === correctAnswer);
+        btn.classList.toggle('wrong',   currentChoices[i] !== correctAnswer);
+      });
+    });
+
+    socket.on('game:scores-update', ({ scores }) => {
+      // Update sidebar with qual scores
+      renderPlayerListWithScores('active-player-list', playerList, scores, currentRound);
+    });
+
+    socket.on('game:break', ({ seconds }) => {
+      document.getElementById('nextRoundOverlay').classList.add('show');
+      document.getElementById('nextRoundTimer').textContent = seconds;
+      if (seconds === 0) document.getElementById('nextRoundOverlay').classList.remove('show');
+    });
+
+    socket.on('game:qualification-end', ({ qualifiers, threshold, allScores }) => {
+      // Clear the question display so last question doesn't show behind overlay
+      document.getElementById('questionText').textContent = '';
+      const questionNum  = document.getElementById('questionNum');
+      if (questionNum)  questionNum.textContent  = '';
+      const choicesList = document.getElementById('choicesList');
+      if (choicesList) choicesList.innerHTML = '';
+
+      const overlay = document.getElementById('transitionOverlay');
+      overlay.classList.add('show');
+      document.getElementById('nextRoundOverlay').classList.remove('show');
+
+      document.getElementById('transitionSubtitle').textContent =
+        `${qualifiers.length} player${qualifiers.length !== 1 ? 's' : ''} qualified with ${threshold}+ correct`;
+
+      document.getElementById('qualifierList').innerHTML = qualifiers.map((q, i) =>
+        `<div class="qualifier-chip" style="animation-delay:${i * 0.08}s">
+          ${esc(q.nickname)} <span style="opacity:0.7;font-weight:600">${q.score}/10</span>
+        </div>`
+      ).join('');
+    });
+
+    socket.on('game:transition', ({ seconds }) => {
+      document.getElementById('transitionCountdown').textContent =
+        seconds > 0 ? `Starting in ${seconds}...` : '';
+    });
+
+    socket.on('game:mindfield-start', () => {
+    document.getElementById('phaseBadge').textContent = 'Mind Field Round';
+      // Overlay stays up until game:question fires and renders the first MF question
+    });
+
+    socket.on('game:eliminations', ({ playerList: pl, activeCount, totalStarted: ts }) => {
+      playerList = pl;  // full list including active:false players
+      if (ts) totalStarted = ts;
+      renderPlayerList('active-player-list', pl);  // shows everyone with OUT badge
+      const denom = totalStarted || totalPlayers;
+      document.getElementById('playersLeftDisplay').textContent = `${activeCount}/${denom}`;
+    });
+
+    socket.on('game:mf-question', ({ playerList: pl }) => {
+      // Keep playerList in sync during MF round if server sends it
+      if (pl) playerList = pl;
+    });
+
+    socket.on('game:end', ({ winner, totalQuestions, totalPlayers: tp }) => {
+      showView('view-end');
+      const denom = totalStarted || tp;
+      if (winner) {
+        document.getElementById('winnerCongrats').textContent  = 'Congratulations!';
+        document.getElementById('winnerName').textContent      = winner;
+        document.getElementById('newGameMsg').textContent      = 'A new game will be starting soon...';
+        document.getElementById('endPlayersDisplay').textContent = `1/${denom}`;
+      } else {
+        document.getElementById('winnerCongrats').textContent  = 'No one survived';
+        document.getElementById('winnerName').textContent      = 'the Mind Field.';
+        document.getElementById('newGameMsg').textContent      = 'A new game will start in a little bit.';
+        document.getElementById('endPlayersDisplay').textContent = `0/${denom}`;
+      }
+      document.getElementById('endRoundDisplay').textContent = totalQuestions;
+      renderPlayerList('end-player-list', playerList);
+    });
+
+    socket.on('room:cancelled', () => window.location.href = '/host/dashboard.html');
+    socket.on('error', ({ message }) => showErrorToast(message));
+
+    function showErrorToast(message) {
+      const toast = document.getElementById('errorToast');
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    // ── Actions ───────────────────────────────
+    function startGame() {
+      const btn = document.getElementById('startBtn');
+      btn.disabled = true; btn.textContent = 'Starting...';
+      socket.emit('host:start', { roomKey: roomData.roomKey, token });
+    }
+      function cancelRoom() {
+    document.getElementById('cancelModal').classList.add('show');
+  }
+  function closeCancelModal() {
+    document.getElementById('cancelModal').classList.remove('show');
+  }
+  function confirmCancel() {
+    socket.emit('host:cancel-room', { roomKey: roomData.roomKey, token });
+    localStorage.removeItem('mf_room');
+    window.location.href = '/host/dashboard.html';
+  }
+    function exitGame() {
+      socket.emit('host:exit', { roomKey: roomData.roomKey, token });
+      localStorage.removeItem('mf_room');
+      window.location.href = '/host/dashboard.html';
+    }
+
+    function showView(id) {
+      ['view-preview','view-active','view-end'].forEach(v =>
+        document.getElementById(v).style.display = (v === id) ? 'grid' : 'none'
+      );
+    }
+
+    function renderPlayerList(containerId, players) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      if (!players || !players.length) {
+        el.innerHTML = '<div class="player-item"><span class="p-name" style="color:black;font-style:italic">Waiting...</span></div>';
+        return;
+      }
+      el.innerHTML = players.map(p => `
+        <div class="player-item ${p.active ? '' : 'out'}">
+          <span class="p-name">${esc(p.nickname)}${p.active ? '' : '<span class="out-tag">OUT</span>'}</span>
+        </div>`).join('');
+    }
+
+    function renderPlayerListWithScores(containerId, players, scores, round) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const scoreMap = {};
+      (scores || []).forEach(s => scoreMap[s.nickname] = s.score);
+      const asked = round || 0;
+      el.innerHTML = players.map(p => `
+        <div class="player-item ${p.active ? '' : 'out'}">
+          <span class="p-name">${esc(p.nickname)}</span>
+          <span class="p-score">${scoreMap[p.nickname] ?? 0}/${asked}</span>
+        </div>`).join('');
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Promotions banner ─────────────────────
+    let promoItems    = [];
+    let promoIndex    = 0;
+    let promoInterval = null;
+
+    async function loadAndStartPromos() {
+      try {
+        const res  = await fetch('/api/promotions', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const isComplete = p => p?.headline?.trim() && p?.days?.trim() && p?.startTime?.trim() && p?.description?.trim();
+        const venue = (data.venue || []).filter(isComplete).map(p => ({ ...p, type: '🍺 Venue' }));
+        const host  = (data.host  || []).filter(isComplete).map(p => ({ ...p, type: '🎤 Host'  }));
+        promoItems = [...venue, ...host];
+        if (promoItems.length) {
+          buildPromoDots();
+          showPromo(0);
+          promoInterval = setInterval(() => {
+            promoIndex = (promoIndex + 1) % promoItems.length;
+            showPromo(promoIndex);
+          }, 15000);
+        }
+      } catch { /* no promos — silent */ }
+    }
+
+    function buildPromoDots() {
+      const html = promoItems.map((_, i) =>
+        `<div class="promo-dot ${i === 0 ? 'active' : ''}" id="promo-dot-${i}"></div>`
+      ).join('');
+      document.getElementById('promoDots').innerHTML    = html;
+      document.getElementById('promoDotsEnd').innerHTML = promoItems.map((_, i) =>
+        `<div class="promo-dot ${i === 0 ? 'active' : ''}" id="promo-dot-end-${i}"></div>`
+      ).join('');
+    }
+
+    function showPromo(index) {
+      const p = promoItems[index];
+      if (!p) return;
+
+      const labelText = (p.type || '').replace(/[^a-zA-Z ]/g, '').trim().toUpperCase();
+
+      // Helper: update one panel, fading inner
+      function updatePanel(suffix) {
+        const sfx    = suffix ? suffix : '';
+        const inner  = document.getElementById('promoInner' + sfx);
+        if (!inner) return;
+        inner.style.transition = 'opacity 0.3s';
+        inner.style.opacity    = '0';
+        setTimeout(() => {
+          document.getElementById('promoTypeLabel' + sfx).textContent = labelText;
+          const headline = document.getElementById('promoHeadline' + sfx);
+          headline.textContent    = p.headline || '';
+          headline.style.opacity  = '1';
+          headline.style.fontSize = '';
+          document.getElementById('promoDays' + sfx).textContent = p.days        || '';
+          document.getElementById('promoTime' + sfx).textContent = p.startTime   || '';
+          document.getElementById('promoDesc' + sfx).textContent = p.description || '';
+          const box = document.getElementById('promoBox' + sfx);
+          if (box) { box.classList.remove('promo-slide'); void box.offsetWidth; box.classList.add('promo-slide'); }
+          inner.style.opacity = '1';
+        }, 280);
+      }
+
+      updatePanel('');
+      updatePanel('End');
+
+      // Dots — both panels
+      document.querySelectorAll('.promo-dot').forEach((d, i) =>
+        d.classList.toggle('active', i === index)
+      );
+      promoIndex = index;
+    }
+
+    loadAndStartPromos();
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      const btn     = document.getElementById('fsBtn');
+      const tooltip = document.getElementById('fsTooltip');
+      if (!btn || !tooltip) return;
+      if (document.fullscreenElement) {
+        btn.textContent     = '✕';
+        tooltip.textContent = 'Exit Full Screen';
+      } else {
+        btn.textContent     = '⛶';
+        tooltip.textContent = 'Full Screen';
+      }
+    });
+  </script>
+
+<!-- Error toast -->
+<div class="error-toast" id="errorToast"></div>
+<div class="cancel-modal-backdrop" id="cancelModal">
+  <div class="cancel-modal-card">
+    <div class="cancel-modal-title">Cancel Room?</div>
+    <div class="cancel-modal-sub">All players will be disconnected.</div>
+    <div class="cancel-modal-actions">
+      <button class="btn btn-outline" onclick="closeCancelModal()">Go Back</button>
+      <button class="btn btn-primary" onclick="confirmCancel()">Yes, Cancel</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

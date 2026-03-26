@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mind Field — Dashboard</title>
+  <link rel="stylesheet" href="/shared/style.css"/>
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; }
+
+    .navbar .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .dashboard-wrap {
+      flex: 1;
+      padding: 24px 32px;
+    }
+
+    .dashboard-title {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      color: var(--white);
+      text-shadow: var(--text-shadow-2);
+      margin-bottom: 24px;
+    }
+
+    /* Games grid */
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 18px;
+    }
+
+    .game-card {
+      background: var(--sky-card);
+      border: var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+    }
+
+    .game-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .game-room-name {
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--white);
+      text-shadow: var(--text-shadow-1);
+    }
+
+    .game-date {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-align: right;
+      line-height: 1.3;
+      color: var(--black);
+    }
+
+    .game-meta {
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .game-times {
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .game-winner-label {
+      font-weight: 800;
+      font-size: 1rem;
+      margin-bottom: 2px;
+      color: var(--white);
+      text-shadow: var(--text-shadow-1);
+
+    }
+
+    .game-winner-name {
+      font-weight: 800;
+      font-size: 0.9rem;
+      color: var(--black);
+    }
+
+    .game-q-count {
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--black);
+    }
+    .empty-state p {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/host/dashboard.html" class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt="Mind Field"/>
+      <span class="logo-text">MiND FiELD</span>
+    </a>
+    <div class="nav-right">
+      <a href="/host/profile.html" class="btn btn-ghost">My Profile</a>
+      <a href="/host/promotions.html" class="btn btn-ghost">Edit Promotions</a>
+      <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>
+      <a href="/host/create-room.html" class="btn btn-primary">Create New Room</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrap">
+    <h2 class="dashboard-title">Previous Mind Fields</h2>
+    <div class="games-grid" id="gamesGrid">
+      <p style="font-weight:700">Loading...</p>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('mf_token');
+    if (!token) window.location.href = '/host/signin.html';
+
+    function signOut() {
+      localStorage.removeItem('mf_token');
+      localStorage.removeItem('mf_host');
+      localStorage.removeItem('mf_room');
+      window.location.href = '/host/signin.html';
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    async function loadHistory() {
+      const grid = document.getElementById('gamesGrid');
+      try {
+        const res  = await fetch('/api/history', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.status === 401) { signOut(); return; }
+        const games = await res.json();
+
+        if (!games.length) {
+          grid.innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1">
+              <p>No games yet — create your first room!</p>
+              <a href="/host/create-room.html" class="btn btn-primary">Create New Room</a>
+            </div>`;
+          return;
+        }
+
+        grid.innerHTML = games.map(g => `
+          <div class="game-card">
+            <div class="game-card-header">
+              <div class="game-room-name">${esc(g.room_name)}</div>
+              <div class="game-date">
+                ${formatDate(g.started_at)}
+              </div>
+            </div>
+            <div class="game-meta">${esc(g.location)}</div>
+            <div class="game-times">
+              ${formatTime(g.started_at)} | ${formatTime(g.ended_at)}
+            </div>
+            <div class="game-winner-label">Winner</div>
+            <div class="game-winner-name">${esc(g.winner_nickname || 'No winner')}</div>
+            <div class="game-q-count">${g.total_questions} question${g.total_questions !== 1 ? 's' : ''}</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        grid.innerHTML = `<p style="font-weight:700;color:red">Failed to load history.</p>`;
+      }
+    }
+
+    function esc(str) {
+      return String(str ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    loadHistory();
+  </script>
+</body>
+</html>

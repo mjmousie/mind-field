@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Mind Field — Join Room</title>
+  <link rel="stylesheet" href="/player/player-style.css"/>
+  <link rel="stylesheet" href="../shared/style.css">
+  <style>
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 24px;
+      min-height: 0;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      color: var(--white);
+      text-shadow: var(--text-shadow-2);
+      text-align: center;
+    }
+    .form-area {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .input-field {
+      font-size: 1.5rem;
+      font-family: var(--font-display);
+      text-align: center;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt=""/>
+      <span class="logo-text">MiND FiELD</span>
+    </div>
+    <div id="accountNav" style="display:flex;gap:8px;align-items:center;"></div>
+  </nav>
+
+  <div class="wrap">
+    <h1>Enter Room Key</h1>
+    <div class="form-area">
+      <div id="msg" class="msg"></div>
+      <input
+        class="input-field"
+        type="text"
+        id="roomKey"
+        maxlength="4"
+        placeholder="XXXX"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+      />
+      <button class="btn btn-primary" id="checkBtn" onclick="checkRoom()">
+        Enter Room
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const keyParam = params.get('key');
+    if (keyParam) {
+      document.getElementById('roomKey').value = keyParam.toUpperCase();
+      setTimeout(checkRoom, 300);
+    }
+
+    async function checkRoom() {
+      const key = document.getElementById('roomKey').value.trim().toUpperCase();
+      const msg = document.getElementById('msg');
+      const btn = document.getElementById('checkBtn');
+
+      msg.className   = 'msg';
+      msg.textContent = '';
+
+      if (key.length !== 4) {
+        msg.className   = 'msg error';
+        msg.textContent = 'Please enter a 4-character room key.';
+        return;
+      }
+
+      btn.disabled    = true;
+      btn.textContent = 'Checking...';
+
+      try {
+        const res  = await fetch(`/api/rooms/${key}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Room not found');
+        sessionStorage.setItem('mf_room_key',  data.roomKey);
+        sessionStorage.setItem('mf_room_name', data.roomName);
+        window.location.href = '/player/nickname.html';
+      } catch (e) {
+        msg.className   = 'msg error';
+        msg.textContent = e.message;
+        btn.disabled    = false;
+        btn.textContent = 'Check Room';
+      }
+    }
+
+    document.getElementById('roomKey').addEventListener('input', function () {
+      this.value = this.value.toUpperCase();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') checkRoom();
+    });
+
+    // Account nav
+    const playerToken = localStorage.getItem('mf_player_token');
+    const playerData  = JSON.parse(localStorage.getItem('mf_player') || 'null');
+    const nav = document.getElementById('accountNav');
+    if (playerToken && playerData) {
+      nav.innerHTML = `
+        <a href="/player/player-profile.html" style="font-weight:800;font-size:0.85rem;color:var(--white);border-radius:20px;text-shadow:var(--text-shadow);border:2px solid var(--black);background:var(--salmon);padding:4px 8px;text-decoration:none;">
+          ${playerData.displayName}
+        </a>`;
+    } else {
+      nav.innerHTML = `
+        <a href="/player/player-login.html" style="font-weight:800;font-size:0.85rem;color:var(--black);text-decoration:none;">Sign In</a>
+        <a href="/player/player-signup.html" class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:0.82rem;">Sign Up</a>`;
+    }
+  </script>
+</body>
+</html>

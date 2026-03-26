@@ -1,0 +1,19 @@
+.cancel-modal-backdrop {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.55); backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  align-items:center; justify-content:center;
+  z-index:300;
+}
+.cancel-modal-backdrop.show { display:flex; }
+.cancel-modal-card {
+  background:var(--sky-card); border:var(--border);
+  border-radius:var(--radius-lg); padding:28px 24px;
+  width:calc(100% - 48px); max-width:420px; text-align:center;
+}
+.cancel-modal-title {
+  font-family:var(--font-display); font-size:1.6rem;
+  color:var(--white); text-shadow:2px 2px 0 var(--black); margin-bottom:10px;
+}
+.cancel-modal-sub { font-size:0.9rem; font-weight:700; color:var(--black); margin-bottom:24px; }
+.cancel-modal-actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; }

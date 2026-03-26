@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mind Field — Create Room</title>
+  <link rel="stylesheet" href="/shared/style.css"/>
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+    .wrap {
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; padding:24px;
+    }
+    .room-card { width:100%; max-width:560px; }
+    .room-card .btn-primary {
+      width:100%; margin-top:8px; padding:12px; font-size:1rem;
+    }
+    .back-link {
+      margin-top:16px; text-align:center; font-weight:700;
+    }
+    .back-link a { color:var(--black); text-decoration:none; }
+    .back-link a:hover { text-decoration:underline; }
+
+    /* ── Location autocomplete ────────────────── */
+    .location-wrap { position:relative; }
+    .places-dropdown {
+      position:absolute; top:calc(100% + 4px); left:0; right:0;
+      background:var(--sky-card); border:var(--border);
+      border-radius:var(--radius-md); z-index:100;
+      box-shadow:3px 3px 0 #111; overflow:hidden;
+      display:none;
+    }
+    .places-dropdown.show { display:block; }
+    .place-item {
+      padding:10px 14px; cursor:pointer;
+      border-bottom:1px solid rgba(0,0,0,0.08);
+      transition:background 0.1s;
+    }
+    .place-item:last-child { border-bottom:none; }
+    .place-item:hover { background:rgba(0,0,0,0.08); }
+    .place-name { font-weight:800; font-size:0.9rem; }
+    .place-address { font-size:0.75rem; font-weight:600; color:rgba(0,0,0,0.5); margin-top:1px; }
+    .place-searching {
+      padding:10px 14px; font-size:0.85rem;
+      font-weight:700; color:rgba(0,0,0,0.5); font-style:italic;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/host/dashboard.html" class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt="Mind Field"/>
+      <span class="logo-text">MiND FiELD</span>
+    </a>
+  </nav>
+
+  <div class="wrap">
+    <h1 class="page-title">Create New Room</h1>
+
+    <div class="card room-card">
+      <div id="msg" class="msg"></div>
+
+      <div class="form-row">
+        <div class="input-group">
+          <label for="roomName">Room Name</label>
+          <input type="text" id="roomName" maxlength="40"/>
+        </div>
+
+        <!-- Location with Places autocomplete -->
+        <div class="input-group">
+          <label for="location">Location</label>
+          <div class="location-wrap">
+            <input type="text" id="location" autocomplete="off"
+              placeholder="Search for a venue..."
+              oninput="onLocationInput()"
+              onfocus="onLocationInput()"
+            />
+            <div class="places-dropdown" id="placesDropdown"></div>
+          </div>
+          <!-- Hidden field stores the confirmed place name -->
+          <input type="hidden" id="locationValue"/>
+        </div>
+      </div>
+
+      <div class="input-group trivia-row">
+        <label for="category">Trivia Category</label>
+        <select id="category">
+          <option value="">Loading categories...</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary w-full" id="createBtn" onclick="createRoom()">
+        Create Room
+      </button>
+    </div>
+
+    <div class="back-link">
+      <a href="/host/dashboard.html">Go Back</a>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('mf_token');
+    if (!token) window.location.href = '/host/signin.html';
+
+    let searchTimer = null;
+    let locationConfirmed = false;
+
+    // ── Categories ────────────────────────────
+    async function loadCategories() {
+      try {
+        const res  = await fetch('/api/categories');
+        const cats = await res.json();
+        const sel  = document.getElementById('category');
+        sel.innerHTML = `<option value="">Select a category...</option>` +
+          cats.map(c => `<option value="${esc(c.id)}" data-name="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+      } catch {
+        document.getElementById('category').innerHTML =
+          '<option value="">Failed to load — check connection</option>';
+      }
+    }
+
+    // ── Location search ───────────────────────
+    function onLocationInput() {
+      locationConfirmed = false;
+      document.getElementById('locationValue').value = '';
+      const query = document.getElementById('location').value.trim();
+
+      clearTimeout(searchTimer);
+      const dropdown = document.getElementById('placesDropdown');
+
+      if (query.length < 2) {
+        dropdown.classList.remove('show');
+        return;
+      }
+
+      dropdown.innerHTML = '<div class="place-searching">Searching...</div>';
+      dropdown.classList.add('show');
+
+      searchTimer = setTimeout(() => searchPlaces(query), 400);
+    }
+
+    async function searchPlaces(query) {
+      const dropdown = document.getElementById('placesDropdown');
+      try {
+        const res  = await fetch(`/api/places?query=${encodeURIComponent(query)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (!data.places || data.places.length === 0) {
+          dropdown.innerHTML = '<div class="place-searching">No places found — try a different search</div>';
+          return;
+        }
+
+        dropdown.innerHTML = data.places.map((p, i) => `
+          <div class="place-item" onclick="selectPlace(${i})">
+            <div class="place-name">${esc(p.name)}</div>
+            <div class="place-address">${esc(p.address)}</div>
+          </div>
+        `).join('');
+
+        // Store results for selection
+        dropdown.dataset.places = JSON.stringify(data.places);
+      } catch {
+        dropdown.innerHTML = '<div class="place-searching">Search failed — check connection</div>';
+      }
+    }
+
+    function selectPlace(index) {
+      const dropdown = document.getElementById('placesDropdown');
+      const places   = JSON.parse(dropdown.dataset.places || '[]');
+      const place    = places[index];
+      if (!place) return;
+
+      document.getElementById('location').value      = place.name;
+      document.getElementById('locationValue').value = place.name;
+      locationConfirmed = true;
+      dropdown.classList.remove('show');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.location-wrap')) {
+        document.getElementById('placesDropdown').classList.remove('show');
+      }
+    });
+
+    // ── Create room ───────────────────────────
+    async function createRoom() {
+      const roomName    = document.getElementById('roomName').value.trim();
+      const location    = document.getElementById('locationValue').value.trim()
+                       || document.getElementById('location').value.trim();
+      const catEl       = document.getElementById('category');
+      const catId       = catEl.value;
+      const catName     = catEl.selectedOptions[0]?.dataset.name || '';
+      const msg         = document.getElementById('msg');
+      const btn         = document.getElementById('createBtn');
+
+      msg.className   = 'msg';
+      msg.textContent = '';
+
+      if (!roomName) {
+        msg.className = 'msg error';
+        msg.textContent = 'Please enter a room name.';
+        return;
+      }
+      if (!location) {
+        msg.className = 'msg error';
+        msg.textContent = 'Please search for and select a location.';
+        return;
+      }
+      if (!catId) {
+        msg.className = 'msg error';
+        msg.textContent = 'Please select a trivia category.';
+        return;
+      }
+
+      btn.disabled    = true;
+      btn.textContent = 'Creating room...';
+
+      try {
+        const res  = await fetch('/api/rooms', {
+          method:  'POST',
+          headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          body:    JSON.stringify({ roomName, location, categoryId: catId, categoryName: catName })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to create room');
+
+        localStorage.setItem('mf_room', JSON.stringify(data));
+        window.location.href = '/host/game-room.html';
+      } catch (e) {
+        msg.className   = 'msg error';
+        msg.textContent = e.message;
+        btn.disabled    = false;
+        btn.textContent = 'Create Room';
+      }
+    }
+
+    function esc(s) {
+      return String(s ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    loadCategories();
+  </script>
+</body>
+</html>

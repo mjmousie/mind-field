@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <!-- Brain body -->
+  <ellipse cx="40" cy="42" rx="26" ry="22" fill="#F4A0A0" stroke="#111" stroke-width="2.5"/>
+  <!-- Left lobe bump -->
+  <circle cx="22" cy="34" r="10" fill="#F4A0A0" stroke="#111" stroke-width="2.5"/>
+  <!-- Right lobe bump -->
+  <circle cx="58" cy="34" r="10" fill="#F4A0A0" stroke="#111" stroke-width="2.5"/>
+  <!-- Top center bump -->
+  <circle cx="40" cy="26" r="9" fill="#F4A0A0" stroke="#111" stroke-width="2.5"/>
+  <!-- Center dividing line -->
+  <line x1="40" y1="28" x2="40" y2="60" stroke="#111" stroke-width="2" stroke-linecap="round"/>
+  <!-- Left wrinkles -->
+  <path d="M28 38 Q24 42 28 46" stroke="#111" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M24 44 Q20 48 25 52" stroke="#111" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Right wrinkles -->
+  <path d="M52 38 Q56 42 52 46" stroke="#111" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M56 44 Q60 48 55 52" stroke="#111" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Stem -->
+  <rect x="33" y="61" width="14" height="7" rx="3" fill="#F4A0A0" stroke="#111" stroke-width="2"/>
+</svg>

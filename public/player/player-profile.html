@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Mind Field — My Profile</title>
+  <link rel="stylesheet" href="/player/player-style.css"/>
+  <style>
+    html, body { height:100dvh; overflow:hidden; display:flex; flex-direction:column; background:var(--sky); }
+    .page-wrap { flex:1; overflow-y:auto; padding:16px 20px 32px; min-height:0; scrollbar-width:none; }
+    .page-wrap::-webkit-scrollbar { display:none; }
+
+    .display-name {
+      font-family:var(--font-display); font-size:2rem;
+      color:var(--white); text-shadow:3px 3px 0 var(--black);
+      text-align:center; margin-bottom:4px;
+    }
+    .member-since { text-align:center; font-size:0.8rem; font-weight:700; color:rgba(0,0,0,0.5); margin-bottom:20px; }
+
+    /* Stats grid */
+    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+    .stat-card {
+      background:var(--sky-card); border:none;
+      border-radius:var(--radius-md); padding:14px 12px; text-align:center;
+    }
+    .stat-value { font-family:var(--font-display); font-size:2rem; color:var(--white); text-shadow:2px 2px 0 var(--black); line-height:1; }
+    .stat-label { font-size:0.75rem; font-weight:800; color:rgba(0,0,0,0.6); margin-top:4px; text-transform:uppercase; letter-spacing:0.5px; }
+
+    /* History */
+    .section-title { font-family:var(--font-display); font-size:1.2rem; color:var(--white); text-shadow:2px 2px 0 var(--black); margin-bottom:10px; }
+    .history-item {
+      background:var(--sky-card); border:none;
+      border-radius:var(--radius-md); padding:12px 14px;
+      margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;
+    }
+    .history-room  { font-weight:800; font-size:0.95rem; }
+    .history-venue { font-size:0.78rem; font-weight:600; color:rgba(0,0,0,0.55); margin-top:1px; }
+    .history-date  { font-size:0.75rem; font-weight:600; color:rgba(0,0,0,0.5); margin-top:2px; }
+    .history-badge {
+      font-size:0.75rem; font-weight:800; padding:3px 10px;
+      border-radius:var(--radius-pill);
+    }
+    .badge-won  { background:var(--salmon); }
+    .badge-qual { background:var(--sky); }
+    .badge-none { background:rgba(0,0,0,0.1); }
+
+    .edit-name-wrap { display:flex; flex-direction: column; align-items:center; justify-content:center; gap:8px; margin:16px; }
+    .edit-name-btn { background:none; border:none; cursor:pointer; font-size:0.8rem; opacity:0.5; }
+    .edit-name-btn:hover { opacity:1; }
+    .edit-name-form { display:none; flex-direction:column; align-items:center; gap:8px; margin-bottom:8px; }
+    .edit-name-form.show { display:flex; }
+    .edit-name-form input { width:200px; padding:8px 12px; background:var(--sky-card); border:var(--border); border-radius:var(--radius-sm); font-family:var(--font-body); font-size:0.95rem; text-align:center; outline:none; }
+    .edit-name-actions { display:flex; gap:8px; }
+    .edit-name-actions button { padding:6px 16px; border:var(--border); border-radius:var(--radius-pill); font-family:var(--font-body); font-weight:800; font-size:0.82rem; cursor:pointer; }
+    .sign-out-link { text-align:center; margin-top:20px; font-weight:700; font-size:0.9rem; cursor:pointer; color:rgba(0,0,0,0.5); }
+    .sign-out-link:hover { color:var(--black); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt=""/>
+      <span class="logo-text">MiND FiELD</span>
+    </div>
+    <a href="/player/index.html" class="btn btn-ghost" style="font-size:1rem;padding:4px 10px;border:none;">X</a>
+  </nav>
+
+  <div class="page-wrap">
+    <div class="edit-name-wrap">
+      <div class="display-name" id="displayName">Loading...</div>
+      <button class="edit-name-btn" onclick="showEditName()" title="Edit display name">Edit display name</button>
+    </div>
+    <div class="edit-name-form" id="editNameForm">
+      <input type="text" id="editNameInput" maxlength="12" placeholder="New display name"/>
+      <div id="editNameMsg" style="font-size:0.8rem;font-weight:700;color:red;display:none;"></div>
+      <div class="edit-name-actions">
+        <button style="background:transparent" onclick="hideEditName()">Cancel</button>
+        <button style="background:var(--salmon)" onclick="saveDisplayName()">Save</button>
+      </div>
+    </div>
+    <div class="member-since" id="memberSince"></div>
+
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Games Played</div></div>
+      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Games Won</div></div>
+      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Correct</div></div>
+      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Incorrect</div></div>
+      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Mind Field Reached</div></div>
+      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Mind Field Wins</div></div>
+    </div>
+
+    <div class="section-title">Game History</div>
+    <div id="historyList"><p style="font-weight:700;opacity:0.5">No games played yet.</p></div>
+
+    <div class="sign-out-link" onclick="signOut()">Sign Out</div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('mf_player_token');
+    if (!token) window.location.href = '/player/player-login.html';
+
+    async function loadProfile() {
+      try {
+        const res  = await fetch('/api/player/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.status === 401) { signOut(); return; }
+        const { player, stats, history } = await res.json();
+
+        document.getElementById('displayName').textContent = player.displayName;
+        document.getElementById('memberSince').textContent =
+          'Member since ' + new Date(player.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+        // Stats
+        const s = stats || {};
+        document.getElementById('statsGrid').innerHTML = `
+          <div class="stat-card"><div class="stat-value">${s.games_played ?? 0}</div><div class="stat-label">Games Played</div></div>
+          <div class="stat-card"><div class="stat-value">${s.games_won ?? 0}</div><div class="stat-label">Games Won</div></div>
+          <div class="stat-card"><div class="stat-value">${s.questions_correct ?? 0}</div><div class="stat-label">Correct</div></div>
+          <div class="stat-card"><div class="stat-value">${s.questions_incorrect ?? 0}</div><div class="stat-label">Incorrect</div></div>
+          <div class="stat-card"><div class="stat-value">${s.mindfield_rounds ?? 0}</div><div class="stat-label">Mind Field Reached</div></div>
+          <div class="stat-card"><div class="stat-value">${s.mindfield_rounds_won ?? 0}</div><div class="stat-label">Mind Field Wins</div></div>`;
+
+        // Win rate
+        const rate = s.games_played > 0 ? Math.round((s.games_won / s.games_played) * 100) : 0;
+
+        // History
+        const list = document.getElementById('historyList');
+        if (!history || !history.length) {
+          list.innerHTML = '<p style="font-weight:700;opacity:0.5">No games played yet.</p>';
+          return;
+        }
+        list.innerHTML = history.map(h => {
+          const badge = h.won ? '<span class="history-badge badge-won">Winner!</span>'
+            : h.reached_mindfield ? '<span class="history-badge badge-qual">Mind Field</span>'
+            : h.qualified ? '<span class="history-badge badge-qual">Qualified</span>'
+            : '<span class="history-badge badge-none">Played</span>';
+          return `
+            <div class="history-item">
+              <div>
+                <div class="history-room">${esc(h.room_name || h.venue || 'Unknown Room')}</div>
+                ${h.room_name && h.venue ? `<div class="history-venue">${esc(h.venue)}</div>` : ''}
+                <div class="history-date">${new Date(h.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · ${h.questions_correct}/${h.questions_correct + h.questions_incorrect} correct</div>
+              </div>
+              ${badge}
+            </div>`;
+        }).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function showEditName() {
+      const current = document.getElementById('displayName').textContent;
+      document.getElementById('editNameInput').value = current;
+      document.getElementById('editNameForm').classList.add('show');
+      document.getElementById('editNameInput').focus();
+    }
+    function hideEditName() {
+      document.getElementById('editNameForm').classList.remove('show');
+      document.getElementById('editNameMsg').style.display = 'none';
+    }
+    async function saveDisplayName() {
+      const val  = document.getElementById('editNameInput').value.trim();
+      const msg  = document.getElementById('editNameMsg');
+      msg.style.display = 'none';
+
+      if (!val) { msg.textContent = 'Name cannot be empty.'; msg.style.display = 'block'; return; }
+      if (val.length > 12) { msg.textContent = 'Max 12 characters.'; msg.style.display = 'block'; return; }
+
+      try {
+        const res  = await fetch('/api/player/display-name', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body:    JSON.stringify({ displayName: val })
+        });
+        const data = await res.json();
+        if (!res.ok) { msg.textContent = data.error; msg.style.display = 'block'; return; }
+
+        // Update display + localStorage
+        document.getElementById('displayName').textContent = data.displayName;
+        const player = JSON.parse(localStorage.getItem('mf_player') || '{}');
+        player.displayName = data.displayName;
+        localStorage.setItem('mf_player',     JSON.stringify(player));
+        localStorage.setItem('mf_nickname',   data.displayName);
+        hideEditName();
+      } catch (e) {
+        msg.textContent = 'Save failed.'; msg.style.display = 'block';
+      }
+    }
+
+    function signOut() {
+      localStorage.removeItem('mf_player_token');
+      localStorage.removeItem('mf_player');
+      window.location.href = '/player/index.html';
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

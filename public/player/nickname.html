@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Mind Field — Enter Nickname and Play</title>
+  <link rel="stylesheet" href="/player/player-style.css"/>
+  <style>
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 8px;
+      text-align: center;
+      min-height: 0;
+    }
+    .room-label {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--black);
+    }
+    .room-name {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      color: var(--white);
+      text-shadow: 2px 2px 0 var(--black);
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      color: var(--white);
+      text-shadow: 2px 2px 0 var(--black);
+    }
+    .sub {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--black);
+    }
+    .form-area {
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 8px;
+    }
+    .back-link {
+      margin-top: 16px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: var(--white);
+      text-shadow: var(--text-shadow);
+    }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt=""/>
+      <span class="logo-text">MiND FiELD</span>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <div class="room-label">Room Name</div>
+    <div class="room-name" id="roomName">Loading...</div>
+
+    <h1>Enter your nickname</h1>
+    <div class="sub">up to 12 characters</div>
+
+    <div class="form-area">
+      <div id="msg" class="msg"></div>
+      <input
+        class="input-field"
+        type="text"
+        id="nickname"
+        maxlength="12"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button class="btn btn-primary" id="playBtn" onclick="playGame()">
+        Play Game
+      </button>
+    </div>
+
+    <div class="back-link" onclick="window.location.href='/player/index.html'">
+      Go Back
+    </div>
+  </div>
+
+  <script>
+    const roomKey  = sessionStorage.getItem('mf_room_key');
+    const roomName = sessionStorage.getItem('mf_room_name');
+    if (!roomKey) window.location.href = '/player/index.html';
+    document.getElementById('roomName').textContent = roomName || '';
+
+    // If signed-in player, auto-fill display name and skip straight to lobby
+    const playerToken = localStorage.getItem('mf_player_token');
+    const playerData  = JSON.parse(localStorage.getItem('mf_player') || 'null');
+    if (playerToken && playerData) {
+      sessionStorage.setItem('mf_nickname', playerData.displayName);
+      localStorage.setItem('mf_nickname',    playerData.displayName);
+      localStorage.setItem('mf_nickname_at', Date.now().toString());
+      window.location.href = '/player/lobby.html';
+    }
+
+    // Restore saved nickname if within 7 days
+    const saved   = localStorage.getItem('mf_nickname');
+    const savedAt = parseInt(localStorage.getItem('mf_nickname_at') || '0', 10);
+    if (saved && (Date.now() - savedAt) < 7 * 24 * 60 * 60 * 1000) {
+      document.getElementById('nickname').value = saved;
+    }
+
+    const BLOCKED_CLIENT = [
+      'fuck','shit','ass','bitch','cunt','cock','dick','pussy',
+      'nig','chink','gook','spic','kike','wetback','beaner','cracker',
+      'towelhead','raghead','coon','redskin','darky','negro',
+      'fag','dyke','tranny','shemale','gayboy','gayboi','gaywad',
+      'homo','lesbo','queer','poofter','poof','battyboy',
+      'retard','tard','nazi','hitler','kkk','rape','porn',
+      'pedophile','pedo','molest','cum','jizz','dildo','masturbat'
+    ];
+    const GAY_COMPANIONS = ['room','bar','boy','boi','wad','tard','bash','porn',
+      'sex','club','hate','slur','joke','man','men','girl','women','lady','ass',
+      'fuck','shit','cunt','dick','cock','bitch','whore','slut'];
+
+    function containsProfanity(str) {
+      const n = str.toLowerCase()
+        .replace(/0/g,'o').replace(/1/g,'i').replace(/3/g,'e')
+        .replace(/4/g,'a').replace(/5/g,'s').replace(/@/g,'a')
+        .replace(/[^a-z]/g,'');
+      if (BLOCKED_CLIENT.some(w => n.includes(w))) return true;
+      if (n.includes('gay') && GAY_COMPANIONS.some(c => n.includes(c))) return true;
+      return false;
+    }
+
+    function playGame() {
+      const nickname = document.getElementById('nickname').value.trim();
+      const msg      = document.getElementById('msg');
+      const btn      = document.getElementById('playBtn');
+
+      msg.className = 'msg'; msg.textContent = '';
+
+      if (!nickname) {
+        msg.className = 'msg error';
+        msg.textContent = 'Please enter a nickname.';
+        return;
+      }
+      if (nickname.length > 12) {
+        msg.className = 'msg error';
+        msg.textContent = 'Nickname must be 12 characters or less.';
+        return;
+      }
+      if (containsProfanity(nickname)) {
+        msg.className = 'msg error';
+        msg.textContent = 'That nickname is not allowed. Please choose a different one.';
+        return;
+      }
+
+      localStorage.setItem('mf_nickname',    nickname);
+      localStorage.setItem('mf_nickname_at', Date.now().toString());
+      sessionStorage.setItem('mf_nickname',  nickname);
+
+      btn.disabled = true; btn.textContent = 'Joining...';
+      window.location.href = '/player/lobby.html';
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') playGame();
+    });
+  </script>
+</body>
+</html>

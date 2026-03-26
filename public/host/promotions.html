@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mind Field — Promotions</title>
+  <link rel="stylesheet" href="/shared/style.css"/>
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+
+    .page-wrap {
+      flex:1; padding:24px 32px 48px;
+      max-width:1100px; margin:0 auto; width:100%;
+    }
+    .page-title {
+      font-family:var(--font-display); font-size:2rem;
+      color:var(--white); text-shadow:2px 2px 0 var(--black); margin-bottom:6px;
+    }
+    .page-sub {
+      font-size:0.9rem; font-weight:700; color:var(--black); margin-bottom:28px;
+    }
+
+    /* ── Status ──────────────────────────────── */
+    .status-msg {
+      font-weight:700; font-size:0.9rem; padding:10px 16px;
+      border-radius:var(--radius-sm); display:none; margin-bottom:20px;
+    }
+    .status-msg.success { background:#dfd; border:1px solid #080; color:#040; display:block; }
+    .status-msg.error   { background:#fdd; border:1px solid #e00; color:#900; display:block; }
+
+    /* ── Two column layout ───────────────────── */
+    .columns {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:24px;
+      align-items:start;
+    }
+
+    /* ── Section ─────────────────────────────── */
+    .promo-section {
+      background:var(--sky-card); border:var(--border);
+      border-radius:var(--radius-lg); padding:20px 20px 16px;
+    }
+    .section-header {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:16px;
+    }
+    .section-heading {
+      font-family:var(--font-display); font-size:1.3rem;
+      color:var(--white); text-shadow:2px 2px 0 var(--black);
+      display:flex; align-items:center; gap:8px;
+    }
+    .section-count {
+      font-size:0.78rem; font-weight:800;
+      background:var(--salmon); border:var(--border);
+      border-radius:var(--radius-pill); padding:2px 10px;
+    }
+    .add-btn {
+      width:34px; height:34px; border-radius:50%;
+      background:var(--salmon); border:var(--border);
+      font-size:1.3rem; font-weight:800; line-height:1;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      box-shadow:var(--shadow); transition:transform 0.1s;
+      flex-shrink:0;
+    }
+    .add-btn:active { transform:scale(0.93); box-shadow:none; }
+
+    /* ── Promo card ──────────────────────────── */
+    .promo-card {
+      background:var(--sky); border:var(--border);
+      border-radius:var(--radius-md); padding:14px 14px 10px;
+      margin-bottom:10px;
+      animation: cardIn 0.25s ease both;
+    }
+    @keyframes cardIn {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .promo-card-header {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .promo-card-num {
+      font-family:var(--font-display); font-size:1rem;
+      color:rgba(0,0,0,0.35);
+    }
+    .remove-btn {
+      width:26px; height:26px; border-radius:50%;
+      background:transparent; border:2px solid rgba(0,0,0,0.2);
+      font-size:1rem; font-weight:800; line-height:1; color:rgba(0,0,0,0.4);
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:all 0.15s;
+    }
+    .remove-btn:hover { background:var(--out-red); border-color:var(--out-red); color:#fff; }
+
+    /* ── Fields ──────────────────────────────── */
+    .field-group { display:flex; flex-direction:column; gap:3px; margin-bottom:8px; }
+    .field-group:last-child { margin-bottom:0; }
+    .field-label {
+      font-size:0.7rem; font-weight:800; letter-spacing:0.5px;
+      text-transform:uppercase; color:rgba(0,0,0,0.55);
+    }
+    .field-group input,
+    .field-group textarea {
+      width:100%; padding:8px 10px;
+      background:var(--sky-card); border:var(--border);
+      border-radius:var(--radius-sm);
+      font-family:var(--font-body); font-size:0.88rem;
+      color:var(--black); outline:none;
+      transition:box-shadow 0.15s;
+    }
+    .field-group input::placeholder,
+    .field-group textarea::placeholder {
+      color:rgba(0,0,0,0.45);
+    }
+    .field-group input:focus,
+    .field-group textarea:focus { box-shadow:var(--shadow); }
+    .field-group input.f-headline { font-weight:800; font-size:0.95rem; }
+    .field-group textarea {
+      resize:none; height:54px; line-height:1.4;
+    }
+
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+    /* ── Empty state ─────────────────────────── */
+    .empty-state {
+      text-align:center; padding:20px 10px;
+      font-weight:700; font-size:0.88rem; color:rgba(0,0,0,0.4);
+      border:2px dashed rgba(0,0,0,0.15); border-radius:var(--radius-md);
+    }
+
+    /* ── Action row ──────────────────────────── */
+    .action-row {
+      display:flex; gap:12px; justify-content:flex-end;
+      margin-top:28px; align-items:center;
+    }
+    .action-row .btn { min-width:140px; width:auto; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/host/dashboard.html" class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt=""/>
+      <span class="logo-text">MiND FiELD</span>
+    </a>
+  </nav>
+
+  <div class="page-wrap">
+    <div class="page-title">Promotions</div>
+    <div class="page-sub">
+      Rotate on the Game Room Preview screen every 15 seconds.
+      All four fields must be filled in for a promotion to be saved.
+    </div>
+
+    <div id="statusMsg" class="status-msg"></div>
+
+    <div class="columns">
+      <!-- VENUE -->
+      <div class="promo-section">
+        <div class="section-header">
+          <div class="section-heading">
+            🍺 Venue
+            <span class="section-count" id="venue-count">0</span>
+          </div>
+          <button class="add-btn" onclick="addPromo('venue')" title="Add promotion">+</button>
+        </div>
+        <div id="venue-list"></div>
+        <div class="empty-state" id="venue-empty">No promotions yet — hit + to add one</div>
+      </div>
+
+      <!-- HOST -->
+      <div class="promo-section">
+        <div class="section-header">
+          <div class="section-heading">
+            🎤 Host
+            <span class="section-count" id="host-count">0</span>
+          </div>
+          <button class="add-btn" onclick="addPromo('host')" title="Add promotion">+</button>
+        </div>
+        <div id="host-list"></div>
+        <div class="empty-state" id="host-empty">No promotions yet — hit + to add one</div>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <a href="/host/dashboard.html" class="btn btn-outline" style="border:var(--border)">Back to Dashboard</a>
+      <button class="btn btn-primary" id="saveBtn" onclick="savePromotions()">Save Promotions</button>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('mf_token');
+    if (!token) window.location.href = '/host/signin.html';
+
+    // State — arrays of objects
+    const state = { venue: [], host: [] };
+
+    // ── Render ────────────────────────────────
+    function render(section) {
+      const list     = document.getElementById(`${section}-list`);
+      const empty    = document.getElementById(`${section}-empty`);
+      const countEl  = document.getElementById(`${section}-count`);
+      const items    = state[section];
+
+      countEl.textContent = items.length;
+      empty.style.display = items.length ? 'none' : 'block';
+
+      list.innerHTML = items.map((p, i) => `
+        <div class="promo-card" id="${section}-card-${i}">
+          <div class="promo-card-header">
+            <div class="promo-card-num">#${i + 1}</div>
+            <button class="remove-btn" onclick="removePromo('${section}', ${i})" title="Remove">−</button>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Headline</div>
+            <input class="f-headline" type="text" maxlength="16"
+              placeholder="e.g. Happy Hour"
+              value="${esc(p.headline)}"
+              oninput="update('${section}', ${i}, 'headline', this.value)"/>
+          </div>
+
+          <div class="two-col">
+            <div class="field-group">
+              <div class="field-label">Day(s)</div>
+              <input type="text" maxlength="15"
+                placeholder="e.g. Mon – Fri"
+                value="${esc(p.days)}"
+                oninput="update('${section}', ${i}, 'days', this.value)"/>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Start Time</div>
+              <input type="text" maxlength="8"
+                placeholder="e.g. 5:00 PM"
+                value="${esc(p.startTime)}"
+                oninput="update('${section}', ${i}, 'startTime', this.value)"/>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Description</div>
+            <textarea maxlength="72"
+              placeholder="e.g. 50% off all drafts and well drinks"
+              oninput="update('${section}', ${i}, 'description', this.value)">${esc(p.description)}</textarea>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ── Mutations ─────────────────────────────
+    function addPromo(section) {
+      state[section].push({ headline:'', days:'', startTime:'', description:'' });
+      render(section);
+      // Scroll new card into view
+      const cards = document.querySelectorAll(`#${section}-list .promo-card`);
+      cards[cards.length - 1]?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+
+    function removePromo(section, index) {
+      state[section].splice(index, 1);
+      render(section);
+    }
+
+    function update(section, index, field, value) {
+      if (state[section][index]) state[section][index][field] = value;
+    }
+
+    // ── Load ──────────────────────────────────
+    async function loadPromotions() {
+      const statusEl = document.getElementById('statusMsg');
+      try {
+        const res = await fetch('/api/promotions', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        const data = await res.json();
+        state.venue = (data.venue || []).map(p => ({
+          headline: p.headline || '', days: p.days || '',
+          startTime: p.startTime || '', description: p.description || ''
+        }));
+        state.host = (data.host || []).map(p => ({
+          headline: p.headline || '', days: p.days || '',
+          startTime: p.startTime || '', description: p.description || ''
+        }));
+        render('venue');
+        render('host');
+      } catch (e) {
+        statusEl.className   = 'status-msg error';
+        statusEl.textContent = 'Failed to load promotions: ' + e.message;
+        render('venue');
+        render('host');
+      }
+    }
+
+    // ── Save ──────────────────────────────────
+    async function savePromotions() {
+      const btn      = document.getElementById('saveBtn');
+      const statusEl = document.getElementById('statusMsg');
+
+      btn.disabled    = true;
+      btn.textContent = 'Saving...';
+      statusEl.className = 'status-msg';
+
+      try {
+        const res = await fetch('/api/promotions', {
+          method:  'POST',
+          headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+          body:    JSON.stringify({ venue: state.venue, host: state.host })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+
+        const total = data.saved.venue + data.saved.host;
+        statusEl.className   = 'status-msg success';
+        statusEl.textContent = `Saved! ${data.saved.venue} venue + ${data.saved.host} host promotion${total !== 1 ? 's' : ''} stored.`;
+        statusEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      } catch (e) {
+        statusEl.className   = 'status-msg error';
+        statusEl.textContent = 'Save failed: ' + e.message;
+      }
+
+      btn.disabled    = false;
+      btn.textContent = 'Save Promotions';
+    }
+
+    function esc(s) {
+      return String(s ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    loadPromotions();
+  </script>
+</body>
+</html>

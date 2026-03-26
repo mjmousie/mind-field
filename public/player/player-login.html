@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Mind Field — Sign In</title>
+  <link rel="stylesheet" href="/player/player-style.css"/>
+  <link rel="stylesheet" href="../shared/style.css"/>
+  <style>
+    html, body { height:100dvh; overflow:hidden; display:flex; flex-direction:column; }
+    .wrap {
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding:20px 24px; gap:10px; min-height:0;
+    }
+    h1 { font-family:var(--font-display); font-size:1.8rem; color:var(--white); text-shadow:2px 2px 0 var(--black); text-align:center; }
+    .form-area { width:100%; max-width:360px; display:flex; flex-direction:column; gap:12px; }
+    .input-group { display:flex; flex-direction:column; gap:4px; }
+    .input-group label { font-size:0.8rem; font-weight:800; color:var(--white); }
+    .divider { display:flex; align-items:center; gap:10px; margin:4px 0; }
+    .divider span { font-size:0.8rem; font-weight:700; color:rgba(0,0,0,0.5); }
+    .divider::before, .divider::after { content:''; flex:1; height:1px; background:rgba(0,0,0,0.2); }
+    .google-btn {
+      width:100%; padding:12px; border:var(--border); border-radius:var(--radius-pill);
+      background:var(--salmon); font-family:var(--font-body); font-weight:800;
+      font-size:0.95rem; color: var(--white); border-radius: 8px; text-shadow: var(--text-shadow-1); cursor:pointer; display:flex; align-items:center;
+      justify-content:center; gap:10px; transition:box-shadow 0.15s;
+    }
+    .google-btn:hover { box-shadow:var(--shadow); }
+    .google-btn img { width:20px; height:20px; }
+    .bottom-links { text-align:center; font-size:0.9rem; font-weight:700; margin-top:4px; }
+    .bottom-links a { color:var(--black); text-decoration:none; }
+    .bottom-links a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt=""/>
+      <span class="logo-text">MiND FiELD</span>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <h1>Sign In</h1>
+
+    <div class="form-area">
+      <div id="msg" class="msg"></div>      
+
+      <div class="input-group">
+        <label>Email</label>
+        <input class="input-field" type="email" id="email" autocomplete="email"/>
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input class="input-field" type="password" id="password" autocomplete="current-password"/>
+      </div>
+
+      <button class="btn btn-primary" id="loginBtn" onclick="signIn()">Sign In</button>
+
+      <div class="divider"><span>or</span></div>
+
+      <!-- Google Sign In rendered button -->
+      <div id="googleBtnContainer" style="display:flex;justify-content:center;"></div>
+
+      <div class="bottom-links">
+        No account? <a href="/player/player-signup.html">Create one</a><br/>
+        <a href="/player/index.html" style="opacity:0.6">Play as Guest instead</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    const GOOGLE_CLIENT_ID = '855545584453-litp7t3l02m0nlathu7dv72ms5it17l5.apps.googleusercontent.com';
+
+    // Render Google button when GSI loads
+    function initGoogleButton() {
+      if (!window.google) return;
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback:  handleGoogleCredential
+      });
+      google.accounts.id.renderButton(
+        document.getElementById('googleBtnContainer'),
+        { theme: 'outline', size: 'large', width: 360, text: 'continue_with' }
+      );
+    }
+
+    // Try immediately in case script already loaded, else wait
+    if (window.google) {
+      initGoogleButton();
+    } else {
+      window.addEventListener('load', initGoogleButton);
+    }
+
+    async function handleGoogleCredential(response) {
+      const msg = document.getElementById('msg');
+      try {
+        const res  = await fetch('/api/player/google', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        savePlayerSession(data);
+        redirectAfterLogin();
+      } catch (e) {
+        msg.className = 'msg error'; msg.textContent = e.message;
+      }
+    }
+
+    async function signIn() {
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const msg      = document.getElementById('msg');
+      const btn      = document.getElementById('loginBtn');
+
+      msg.className = 'msg'; msg.textContent = '';
+      if (!email || !password) { msg.className = 'msg error'; msg.textContent = 'Email and password are required.'; return; }
+
+      btn.disabled = true; btn.textContent = 'Signing in...';
+      try {
+        const res  = await fetch('/api/player/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        savePlayerSession(data);
+        redirectAfterLogin();
+      } catch (e) {
+        msg.className = 'msg error'; msg.textContent = e.message;
+        btn.disabled = false; btn.textContent = 'Sign In';
+      }
+    }
+
+    function savePlayerSession(data) {
+      localStorage.setItem('mf_player_token', data.token);
+      localStorage.setItem('mf_player',       JSON.stringify(data.player));
+      localStorage.setItem('mf_nickname',     data.player.displayName);
+      localStorage.setItem('mf_nickname_at',  Date.now().toString());
+    }
+
+    function redirectAfterLogin() {
+      const returnTo = sessionStorage.getItem('mf_return_to') || '/player/index.html';
+      sessionStorage.removeItem('mf_return_to');
+      window.location.href = returnTo;
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
+  </script>
+</body>
+</html>
