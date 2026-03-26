@@ -604,7 +604,7 @@ async function handlePlayerLeave(socket, roomKey) {
 // SPA FALLBACKS
 // ─────────────────────────────────────────────
 app.get('/', (_req, res) =>
-  res.redirect('/player')
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'))
 );
 
 app.get('/player', (_req, res) =>
@@ -618,7 +618,7 @@ app.get('/host', (_req, res) =>
 // ─────────────────────────────────────────────
 // START
 // ─────────────────────────────────────────────
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   console.log(`\n🧠  Mind Field running → http://localhost:${PORT}\n`);
   console.log(`    Host interface  →  http://localhost:${PORT}/host`);
   console.log(`    Player join     →  http://localhost:${PORT}/player\n`);
