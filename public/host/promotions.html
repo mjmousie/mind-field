@@ -17,8 +17,32 @@
       color:var(--white); text-shadow:2px 2px 0 var(--black); margin-bottom:6px;
     }
     .page-sub {
-      font-size:0.9rem; font-weight:700; color:var(--black); margin-bottom:28px;
+      font-size:0.9rem; font-weight:700; color:var(--white); margin-bottom:28px;
     }
+    .venue-location-section {
+      background:var(--sky-card); border:var(--border);
+      border-radius:var(--radius-lg); padding:20px;
+      margin-bottom:24px;
+    }
+    .venue-location-section h3 {
+      font-family:var(--font-display); font-size:1.2rem;
+      color:var(--white); text-shadow:2px 2px 0 var(--black);
+      margin-bottom:12px;
+    }
+    .location-wrap { position:relative; }
+    .places-dropdown {
+      position:absolute; top:calc(100% + 4px); left:0; right:0;
+      background:var(--sky-card); border:var(--border);
+      border-radius:var(--radius-md); z-index:100;
+      box-shadow:3px 3px 0 #111; overflow:hidden; display:none;
+    }
+    .places-dropdown.show { display:block; }
+    .place-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(0,0,0,0.08); transition:background 0.1s; }
+    .place-item:last-child { border-bottom:none; }
+    .place-item:hover { background:rgba(0,0,0,0.08); }
+    .place-name { font-weight:800; font-size:0.9rem; }
+    .place-address { font-size:0.75rem; font-weight:600; color:rgba(0,0,0,0.5); margin-top:1px; }
+    .place-searching { padding:10px 14px; font-size:0.85rem; font-weight:700; color:rgba(0,0,0,0.5); font-style:italic; }
 
     /* ── Status ──────────────────────────────── */
     .status-msg {
@@ -98,7 +122,7 @@
     .field-group:last-child { margin-bottom:0; }
     .field-label {
       font-size:0.7rem; font-weight:800; letter-spacing:0.5px;
-      text-transform:uppercase; color:rgba(0,0,0,0.55);
+      text-transform:uppercase; color:white;
     }
     .field-group input,
     .field-group textarea {
@@ -106,12 +130,12 @@
       background:var(--sky-card); border:var(--border);
       border-radius:var(--radius-sm);
       font-family:var(--font-body); font-size:0.88rem;
-      color:var(--black); outline:none;
+      color:var(--white); outline:none;
       transition:box-shadow 0.15s;
     }
     .field-group input::placeholder,
     .field-group textarea::placeholder {
-      color:rgba(0,0,0,0.45);
+      color:white;
     }
     .field-group input:focus,
     .field-group textarea:focus { box-shadow:var(--shadow); }
@@ -154,12 +178,29 @@
 
     <div id="statusMsg" class="status-msg"></div>
 
+    <!-- Venue Location -->
+    <div class="venue-location-section">
+      <h3>Venue Location</h3>
+      <div class="input-group">
+        <label for="venueLocation">Venue Name</label>
+        <div class="location-wrap">
+          <input type="text" id="venueLocation" autocomplete="off"
+            placeholder="Search for your venue..."
+            oninput="onLocationInput()"
+          />
+          <div class="places-dropdown" id="placesDropdown"></div>
+        </div>
+        <input type="hidden" id="venueLocationValue"/>
+        <div style="font-size:0.78rem;font-weight:600;color:rgba(0,0,0,0.5);margin-top:4px;">Used as the location for all games created from this account</div>
+      </div>
+    </div>
+
     <div class="columns">
       <!-- VENUE -->
       <div class="promo-section">
         <div class="section-header">
           <div class="section-heading">
-            🍺 Venue
+            Venue
             <span class="section-count" id="venue-count">0</span>
           </div>
           <button class="add-btn" onclick="addPromo('venue')" title="Add promotion">+</button>
@@ -172,7 +213,7 @@
       <div class="promo-section">
         <div class="section-header">
           <div class="section-heading">
-            🎤 Host
+            Host
             <span class="section-count" id="host-count">0</span>
           </div>
           <button class="add-btn" onclick="addPromo('host')" title="Add promotion">+</button>
@@ -265,6 +306,51 @@
       if (state[section][index]) state[section][index][field] = value;
     }
 
+    // ── Location search ───────────────────────
+    let searchTimer = null;
+
+    function onLocationInput() {
+      document.getElementById('venueLocationValue').value = '';
+      const query = document.getElementById('venueLocation').value.trim();
+      clearTimeout(searchTimer);
+      const dropdown = document.getElementById('placesDropdown');
+      if (query.length < 2) { dropdown.classList.remove('show'); return; }
+      dropdown.innerHTML = '<div class="place-searching">Searching...</div>';
+      dropdown.classList.add('show');
+      searchTimer = setTimeout(() => searchPlaces(query), 400);
+    }
+
+    async function searchPlaces(query) {
+      const dropdown = document.getElementById('placesDropdown');
+      try {
+        const res  = await fetch(`/api/places?query=${encodeURIComponent(query)}`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.places || !data.places.length) {
+          dropdown.innerHTML = '<div class="place-searching">No places found</div>'; return;
+        }
+        dropdown.innerHTML = data.places.map((p, i) => `
+          <div class="place-item" onclick="selectPlace(${i})">
+            <div class="place-name">${esc(p.name)}</div>
+            <div class="place-address">${esc(p.address)}</div>
+          </div>`).join('');
+        dropdown.dataset.places = JSON.stringify(data.places);
+      } catch { dropdown.innerHTML = '<div class="place-searching">Search failed</div>'; }
+    }
+
+    function selectPlace(index) {
+      const dropdown = document.getElementById('placesDropdown');
+      const places   = JSON.parse(dropdown.dataset.places || '[]');
+      const place    = places[index];
+      if (!place) return;
+      document.getElementById('venueLocation').value      = place.name;
+      document.getElementById('venueLocationValue').value = place.name;
+      dropdown.classList.remove('show');
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.location-wrap')) document.getElementById('placesDropdown').classList.remove('show');
+    });
+
     // ── Load ──────────────────────────────────
     async function loadPromotions() {
       const statusEl = document.getElementById('statusMsg');
@@ -282,6 +368,11 @@
           headline: p.headline || '', days: p.days || '',
           startTime: p.startTime || '', description: p.description || ''
         }));
+        // Populate venue location
+        if (data.venueLocation) {
+          document.getElementById('venueLocation').value      = data.venueLocation;
+          document.getElementById('venueLocationValue').value = data.venueLocation;
+        }
         render('venue');
         render('host');
       } catch (e) {
@@ -305,7 +396,10 @@
         const res = await fetch('/api/promotions', {
           method:  'POST',
           headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-          body:    JSON.stringify({ venue: state.venue, host: state.host })
+          body:    JSON.stringify({
+            venue: state.venue, host: state.host,
+            venueLocation: document.getElementById('venueLocationValue').value || document.getElementById('venueLocation').value
+          })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);

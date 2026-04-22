@@ -4,14 +4,14 @@ const db = require('./db');
 // ─────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────
-const COUNTDOWN_SECS    = 10;
+const COUNTDOWN_SECS    = 15;
 const QUESTION_SECS     = 15;
-const BREAK_SECS        = 4;
-const REVEAL_INTRO_SECS = 3;
-const REVEAL_SHOW_SECS  = 3;
+const BREAK_SECS        = 8;
+const REVEAL_INTRO_SECS = 4;
+const REVEAL_SHOW_SECS  = 4;
 const QUAL_COUNT        = 10;
 const QUAL_THRESHOLD    = 7;
-const TRANSITION_SECS   = 15;
+const TRANSITION_SECS   = 8;
 
 // ─────────────────────────────────────────────
 // ROOM STORE
@@ -30,10 +30,13 @@ function generateRoomKey() {
 // ─────────────────────────────────────────────
 // ROOM LIFECYCLE
 // ─────────────────────────────────────────────
-function createRoom({ hostId, hostName, roomName, location, categoryId, categoryName }) {
+function createRoom({ hostId, hostName, roomName, location, categoryId, categoryName, numQuestions, threshold, transitionSecs }) {
   const roomKey = generateRoomKey();
   const room = {
     roomKey, hostId, hostName, roomName, location, categoryId, categoryName,
+    qualCount:      numQuestions   || QUAL_COUNT,
+    qualThresholdOverride: threshold !== undefined ? threshold : QUAL_THRESHOLD,
+    transitionSecs: transitionSecs || TRANSITION_SECS,
     hostSocketId:   null,
     players:        new Map(),
     status:         'waiting',
@@ -42,7 +45,7 @@ function createRoom({ hostId, hostName, roomName, location, categoryId, category
     qualIndex:      0,    // 0-9 during qualification
     mfIndex:        0,    // 0-N during mindfield
     totalStarted:   0,
-    qualThreshold:  QUAL_THRESHOLD,
+    qualThreshold:  threshold !== undefined ? threshold : QUAL_THRESHOLD,
     startedAt:      null,
     gameId:         null,
     timers:         {}
@@ -107,6 +110,16 @@ function addPlayer(roomKey, socketId, nickname) {
 function removePlayer(roomKey, socketId) {
   const room = rooms.get(roomKey);
   if (room) room.players.delete(socketId);
+}
+
+function updatePlayerSocket(roomKey, oldSocketId, newSocketId, nickname) {
+  const room = rooms.get(roomKey);
+  if (!room) return;
+  const player = room.players.get(oldSocketId);
+  if (player) {
+    room.players.delete(oldSocketId);
+    room.players.set(newSocketId, { ...player, socketId: newSocketId });
+  }
 }
 
 function setPlayerAccount(roomKey, socketId, playerId) {
@@ -184,7 +197,7 @@ function startQualRound(roomKey, io) {
 
   room.status = 'active';
 
-  if (room.qualIndex >= QUAL_COUNT) {
+  if (room.qualIndex >= room.qualCount) {
     endQualification(roomKey, io);
     return;
   }
@@ -199,7 +212,7 @@ function startQualRound(roomKey, io) {
   const basePayload = {
     phase:       'qualification',
     round:       room.qualIndex + 1,
-    totalRounds: QUAL_COUNT,
+    totalRounds: room.qualCount,
     question:    q.question,
     choices:     q.choices,
     timer:       QUESTION_SECS,
@@ -277,14 +290,14 @@ function revealQualAnswer(roomKey, io) {
           result:      player.correct ? 'correct' : 'wrong',
           score:       player.qualScore,
           round:       r3.qualIndex + 1,
-          totalRounds: QUAL_COUNT
+          totalRounds: room.qualCount
         });
       }
 
-      const isLastQual = r3.qualIndex >= QUAL_COUNT - 1;
+      const isLastQual = r3.qualIndex >= r3.qualCount - 1;
 
       if (isLastQual) {
-        // Go to qualification end
+        // Go straight to qualification end — no break countdown
         endQualification(roomKey, io);
       } else {
         broadcastCountdown(roomKey, io, BREAK_SECS, () => {
@@ -309,7 +322,7 @@ function endQualification(roomKey, io) {
   const allScores = getScores(room);
 
   // Determine threshold — lower it until at least 2 qualify
-  let threshold = QUAL_THRESHOLD;
+  let threshold = room.qualThresholdOverride;
   let qualifiers;
   while (threshold >= 0) {
     qualifiers = allScores.filter(s => s.score >= threshold);
@@ -334,11 +347,12 @@ function endQualification(roomKey, io) {
     qualifiers,
     threshold,
     allScores,
-    transitionSecs: TRANSITION_SECS
+    totalRounds:    room.qualCount,
+    transitionSecs: room.transitionSecs
   });
 
   // Transition countdown then start Mind Field
-  broadcastCountdown(roomKey, io, TRANSITION_SECS,
+  broadcastCountdown(roomKey, io, room.transitionSecs,
     () => startMindField(roomKey, io), 'game:transition');
 }
 
@@ -381,7 +395,7 @@ function startMfRound(roomKey, io) {
 
   room.status = 'active';
 
-  const qIndex = QUAL_COUNT + room.mfIndex;
+  const qIndex = room.qualCount + room.mfIndex;
   if (qIndex >= room.questions.length) {
     endGame(roomKey, io, null);
     return;
@@ -429,7 +443,7 @@ function revealMfAnswer(roomKey, io) {
   clearTimeout(room.timers.question);
   room.status = 'reveal';
 
-  const q = room.questions[QUAL_COUNT + room.mfIndex];
+  const q = room.questions[room.qualCount + room.mfIndex];
 
   io.to(roomKey).emit('game:reveal-intro');
 
@@ -584,8 +598,8 @@ async function endGame(roomKey, io, winnerNickname) {
   const endedAt      = new Date();
   const totalPlayers = room.players.size;
   const totalRounds  = room.phase === 'mindfield'
-    ? QUAL_COUNT + room.mfIndex + 1
-    : QUAL_COUNT;
+    ? room.qualCount + room.mfIndex + 1
+    : room.qualCount;
 
   if (room.gameId) {
     await db.updateGame(room.gameId, {
@@ -637,10 +651,10 @@ function getCurrentQuestion(roomKey) {
   if (room.phase === 'qualification') {
     const q = room.questions[room.qualIndex];
     if (!q) return null;
-    return { phase: 'qualification', round: room.qualIndex + 1, totalRounds: QUAL_COUNT, question: q.question, choices: q.choices, timer: QUESTION_SECS };
+    return { phase: 'qualification', round: room.qualIndex + 1, totalRounds: room.qualCount, question: q.question, choices: q.choices, timer: QUESTION_SECS };
   }
   if (room.phase === 'mindfield') {
-    const q = room.questions[QUAL_COUNT + room.mfIndex];
+    const q = room.questions[room.qualCount + room.mfIndex];
     if (!q) return null;
     return { phase: 'mindfield', round: room.mfIndex + 1, question: q.question, choices: q.choices, timer: QUESTION_SECS };
   }
@@ -671,5 +685,5 @@ module.exports = {
   createRoom, getRoom, getRoomByHostId, deleteRoom,
   addPlayer, removePlayer, getPlayerList, getActivePlayers,
   startGame, playerAnswer, endGame, getGameHistory, getCurrentQuestion,
-  setPlayerAccount, savePlayerStats
+  setPlayerAccount, savePlayerStats, updatePlayerSocket
 };

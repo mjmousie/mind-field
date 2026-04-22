@@ -35,7 +35,7 @@
     .landing-title {
       font-family: var(--font-display);
       font-size: 3.2rem;
-      color: var(--black);
+      color: var(--white);
       letter-spacing: 1px;
       line-height: 1;
     }
@@ -44,7 +44,6 @@
       font-family: var(--font-display);
       font-size: 1.3rem;
       color: var(--white);
-      text-shadow: 2px 2px 0 var(--black);
       animation: fadeSlideIn 0.5s ease 0.15s both;
     }
 
@@ -52,7 +51,7 @@
       font-family: var(--font-body);
       font-size: 1rem;
       font-weight: 700;
-      color: var(--black);
+      color: var(--white);
       max-width: 320px;
       line-height: 1.6;
       animation: fadeSlideIn 0.5s ease 0.2s both;
@@ -78,15 +77,26 @@
       box-shadow: var(--shadow);
       transition: transform 0.15s, box-shadow 0.15s;
     }
+    .btn-landing-solo {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px;
+      width: 100%; padding: 16px;
+      background: var(--salmon-dark); color: var(--black);
+      border: var(--border); border-radius: var(--radius-pill);
+      font-family: var(--font-display); font-size: 1.3rem;
+      text-decoration: none;
+      box-shadow: var(--shadow);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
     .btn-landing-player:active { transform: translateY(2px); box-shadow: 1px 1px 0 #111; }
 
     .btn-landing-host {
       display: flex; align-items: center; justify-content: center;
       gap: 10px;
       width: 100%; padding: 14px;
-      background: transparent; color: var(--black);
-      border: var(--border); border-radius: var(--radius-pill);
-      font-family: var(--font-display); font-size: 1.1rem;
+      background: transparent; color: var(--white);
+      border: none;
+      font-family: var(--font-display); font-size: 0.8rem;
       text-decoration: none;
       transition: background 0.15s;
     }
@@ -121,6 +131,9 @@
     <div class="btn-group">
       <a href="/player" class="btn-landing-player">
         Join a Game
+      </a>
+      <a href="/player/solo.html" class="btn-landing-solo">
+        Play Solo
       </a>
       <a href="/host" class="btn-landing-host">
         Host Sign In

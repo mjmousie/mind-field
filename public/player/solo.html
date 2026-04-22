@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <title>Mind Field — Solo Mode</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+
+    :root {
+      --bg:       #111111;
+      --bg-card:  #1e1e1e;
+      --bg-input: #2a2a2a;
+      --orange:   #E8531A;
+      --orange-dk:#c94514;
+      --white:    #ffffff;
+      --grey:     #888888;
+      --border:   1px solid #333;
+      --radius-pill: 999px;
+      --radius-md:   16px;
+      --radius-sm:   10px;
+      --font-display: 'Fredoka One', cursive;
+      --font-body:    'Nunito', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html, body {
+      width:100%; height:100dvh; overflow:hidden;
+      font-family:var(--font-body); background:var(--bg); color:var(--white);
+      display:flex; flex-direction:column;
+      touch-action:pan-y; overscroll-behavior:none;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* ── NAVBAR ─────────────────────────────── */
+    .navbar {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 20px; flex-shrink:0;
+      border-bottom:1px solid #222;
+    }
+    .logo { display:flex; align-items:center; gap:8px; text-decoration:none; }
+    .logo-img { width:36px; height:36px; }
+    .logo-text { font-family:var(--font-display); font-size:1.3rem; color:var(--white); }
+    .phase-pill {
+      font-family:var(--font-display); font-size:0.85rem;
+      background:var(--orange); color:var(--white);
+      padding:4px 14px; border-radius:var(--radius-pill);
+    }
+
+    /* ── VIEWS ──────────────────────────────── */
+    .view { display:none; flex-direction:column; flex:1; min-height:0; animation:fadeIn 0.3s ease both; }
+    .view.active { display:flex; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes popIn  { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
+
+    /* ── START SCREEN ───────────────────────── */
+    #view-start {
+      align-items:center; justify-content:center;
+      gap:20px; padding:32px 24px; text-align:center;
+    }
+    .solo-title {
+      font-family:var(--font-display); font-size:3rem; color:var(--orange);
+      text-shadow:2px 2px 0 rgba(0,0,0,0.4); line-height:1.1;
+    }
+    .solo-sub { font-size:1rem; font-weight:700; color:var(--grey); max-width:300px; line-height:1.6; }
+    .rules-card {
+      background:var(--bg-card); border:var(--border);
+      border-radius:var(--radius-md); padding:18px 20px;
+      width:100%; max-width:360px; text-align:left;
+    }
+    .rules-card h3 { font-family:var(--font-display); font-size:1.1rem; color:var(--orange); margin-bottom:10px; }
+    .rule { display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; font-size:0.88rem; font-weight:700; color:#ccc; line-height:1.4; }
+    .rule-icon { font-size:1rem; flex-shrink:0; margin-top:1px; }
+    .btn-solo {
+      width:100%; max-width:360px; padding:16px;
+      background:var(--orange); color:var(--white);
+      border:none; border-radius:var(--radius-pill);
+      font-size:1rem;
+      cursor:pointer; transition:background 0.15s, transform 0.1s;
+      font-weight: 600;
+    }
+    .btn-solo:hover { background:var(--orange-dk); }
+    .btn-solo:active { transform:scale(0.97); }
+    .btn-solo:disabled { opacity:0.5; cursor:not-allowed; }
+
+    /* ── QUESTION SCREEN ────────────────────── */
+    #view-question { padding:10px 16px 16px; gap:10px; justify-content:flex-start; }
+
+    /* Timer row */
+    .timer-row { display:flex; align-items:center; gap:10px; width:100%; flex-shrink:0; }
+    .timer-num {
+      font-family:var(--font-display); font-size:1.1rem;
+      color:var(--white); font-weight:800;
+      min-width:28px; text-align:center; flex-shrink:0;
+    }
+    .timer-track { flex:1; height:10px; border-radius:6px; background:#333; overflow:hidden; }
+    .timer-fill  { height:100%; border-radius:6px; background:var(--orange); width:100%; }
+
+    /* Question card */
+    .question-card {
+      background:var(--bg-card); border:var(--border);
+      border-radius:var(--radius-md); padding:16px 18px;
+      overflow-y:auto; flex:1; min-height:0;
+      display:flex; flex-direction:column;
+      scrollbar-width:none;
+    }
+    .question-card::-webkit-scrollbar { display:none; }
+    .q-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-shrink:0; }
+    .q-num  { font-size:0.82rem; font-weight:800; color:var(--grey); }
+    .q-score { font-size:0.82rem; font-weight:800; color:var(--orange); }
+    .q-text {
+      font-family:var(--font-display); font-size:1.6rem; line-height:1.3;
+      color:var(--white); flex:1;
+      display:flex; align-items:center; justify-content:center; text-align:center;
+    }
+
+    /* Choices */
+    .choices-list { display:flex; flex-direction:column; gap:10px; width:100%; flex-shrink:0; }
+    .choice-btn {
+      width:100%; padding:14px 18px;
+      background:var(--bg-card); color:var(--white);
+      border:1px solid #444; border-radius:var(--radius-pill);
+      font-family:var(--font-body); font-weight:700; font-size:0.95rem;
+      text-align:left; cursor:pointer;
+      transition:background 0.15s, border-color 0.15s;
+      animation:fadeIn 0.3s ease both;
+    }
+    .choice-btn:nth-child(1){animation-delay:0.00s}
+    .choice-btn:nth-child(2){animation-delay:0.06s}
+    .choice-btn:nth-child(3){animation-delay:0.12s}
+    .choice-btn:nth-child(4){animation-delay:0.18s}
+    .choice-btn:active:not(:disabled) { transform:scale(0.98); }
+    .choice-btn:disabled { cursor:not-allowed; }
+    .choice-btn.selected  { background:#3a2010; border-color:var(--orange); }
+    .choice-btn.correct   { background:#1a3a20; border-color:#7EC8A4; color:#7EC8A4; }
+    .choice-btn.wrong     { background:var(--bg-card); border-color:#555; color:#555; }
+    .choice-btn.wrong.selected { background:#3a1010; border-color:#E05C5C; color:#E05C5C; }
+
+    /* MF streak bar */
+    .streak-row { display:flex; gap:8px; justify-content:center; width:100%; flex-shrink:0; padding:0 4px; }
+    .streak-pip {
+      flex:1; height:14px; border-radius:6px;
+      background:#2a2a2a; border:1px solid #444;
+      transition:background 0.3s;
+    }
+    .streak-pip.done    { background:var(--orange); border-color:var(--orange); }
+    .streak-pip.current { background:#555; border-color:#777; }
+
+    /* ── RESULT SCREENS ─────────────────────── */
+    .result-view {
+      align-items:center; justify-content:center;
+      gap:16px; padding:40px 24px; text-align:center;
+    }
+    .result-icon  { font-size:5rem; animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .result-title { font-family:var(--font-display); font-size:3rem; color:var(--white); line-height:1.1; animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.05s both; }
+    .result-title.orange { color:var(--orange); }
+    .result-sub   { font-family:var(--font-display); font-size:1.1rem; color:var(--grey); animation:fadeIn 0.4s ease 0.2s both; }
+    .score-display {
+      font-family:var(--font-display); font-size:2rem; color:var(--orange);
+      animation:fadeIn 0.4s ease 0.15s both;
+    }
+    .btn-outline-solo {
+      padding:12px 32px; background:transparent; color:var(--white);
+      border: none;
+     font-size:1rem;
+      cursor:pointer;
+    }
+    .btn-outline-solo:hover { border-color:var(--white); }
+
+    /* ── TRANSITION SCREEN ──────────────────── */
+    #view-transition {
+      align-items:center; justify-content:center;
+      gap:20px; padding:40px 24px; text-align:center;
+    }
+    .trans-icon  { font-size:4rem; animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .trans-title { font-family:var(--font-display); font-size:2.2rem; color:var(--orange); text-shadow:2px 2px 0 rgba(0,0,0,0.4); animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both; }
+    .trans-sub   { font-family:var(--font-display); font-size:1rem; color:var(--grey); max-width:280px; line-height:1.5; animation:fadeIn 0.4s ease 0.2s both; }
+    .trans-score { font-family:var(--font-display); font-size:2.4rem; color:var(--white); animation:fadeIn 0.4s ease 0.15s both; }
+    .trans-countdown { font-family:var(--font-display); font-size:1.4rem; color:#555; animation:fadeIn 0.4s ease 0.3s both; }
+
+    /* ── LOADING ────────────────────────────── */
+    #view-loading {
+      align-items:center; justify-content:center; gap:16px; text-align:center;
+    }
+    .loading-icon { font-size:3rem; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-text { font-family:var(--font-display); font-size:1.2rem; color:var(--grey); }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/player/index.html" class="logo">
+      <img src="/shared/brain.svg" class="logo-img" alt=""/>
+      <span class="logo-text">MiND FiELD</span>
+    </a>
+    <div class="phase-pill" id="phasePill">Solo Mode</div>
+  </nav>
+
+  <!-- LOADING -->
+  <div id="view-loading" class="view active">
+    <div class="loading-icon">🧠</div>
+    <div class="loading-text">Loading questions...</div>
+  </div>
+
+  <!-- START -->
+  <div id="view-start" class="view">
+    <div class="solo-title">Solo Mode</div>
+    <div class="solo-sub">Test your knowledge against the Mind Field.</div>
+    <div class="rules-card">
+      <h3>How It Works</h3>
+      <div class="rule"><span>Answer <strong>10 questions</strong> in the Qualification Round</span></div>
+      <div class="rule"><span>Score <strong>7 or more correct</strong> to reach the Mind Field</span></div>
+      <div class="rule"><span>In the Mind Field, answer <strong>5 in a row</strong> without a wrong answer to win</span></div>
+      <div class="rule"><span>You have <strong>15 seconds</strong> per question</span></div>
+    </div>
+    <button class="btn-solo" id="startBtn" onclick="startGame()">Start Game</button>
+    <button class="btn-outline-solo" onclick="window.location.href='/index.html'">Back</button>
+  </div>
+
+  <!-- QUESTION -->
+  <div id="view-question" class="view">
+    <div class="timer-row">
+      <div class="timer-num" id="timerNum">15</div>
+      <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+    </div>
+    <div class="question-card">
+      <div class="q-meta">
+        <div class="q-num"  id="qNum">Question 1/10</div>
+        <div class="q-score" id="qScore">0 correct</div>
+      </div>
+      <div class="q-text" id="qText"></div>
+    </div>
+    <!-- MF streak bar (hidden during qual) -->
+    <div class="streak-row" id="streakRow" style="display:none">
+      <div class="streak-pip" id="pip-0"></div>
+      <div class="streak-pip" id="pip-1"></div>
+      <div class="streak-pip" id="pip-2"></div>
+      <div class="streak-pip" id="pip-3"></div>
+      <div class="streak-pip" id="pip-4"></div>
+    </div>
+    <div class="choices-list" id="choicesList"></div>
+  </div>
+
+  <!-- QUAL → MF TRANSITION -->
+  <div id="view-transition" class="view">
+    <div class="trans-icon">🧠</div>
+    <div class="trans-title">Mind Field!</div>
+    <div class="trans-score" id="transScore"></div>
+    <div class="trans-sub">Answer 5 questions in a row without a single mistake. One wrong answer and it's over.</div>
+    <div class="trans-countdown" id="transCountdown">Starting in 5...</div>
+  </div>
+
+  <!-- FAILED QUAL -->
+  <div id="view-fail-qual" class="view result-view">
+    <div class="result-icon">😔</div>
+    <div class="result-title">Not This Time</div>
+    <div class="score-display" id="failQualScore"></div>
+    <div class="result-sub">You needed 7+ correct to reach the Mind Field.</div>
+    <button class="btn-solo" style="max-width:280px;" onclick="resetGame()">Play Again</button>
+    <button class="btn-outline-solo" onclick="window.location.href='/index.html'">Home</button>
+  </div>
+
+  <!-- ELIMINATED IN MF -->
+  <div id="view-fail-mf" class="view result-view">
+    <div class="result-icon">💥</div>
+    <div class="result-title">Eliminated!</div>
+    <div class="score-display" id="failMfScore"></div>
+    <div class="result-sub">You answered wrong in the Mind Field. So close!</div>
+    <button class="btn-solo" style="max-width:280px;" onclick="resetGame()">Play Again</button>
+    <button class="btn-outline-solo" onclick="window.location.href='/index.html'">Home</button>
+  </div>
+
+  <!-- WINNER -->
+  <div id="view-winner" class="view result-view">
+    <div class="result-icon">🏆</div>
+    <div class="result-title orange">You Won!</div>
+    <div class="score-display">5/5 Mind Field</div>
+    <div class="result-sub">You survived the Mind Field. Impressive!</div>
+    <button class="btn-solo" style="max-width:280px;" onclick="resetGame()">Play Again</button>
+    <button class="btn-outline-solo" onclick="window.location.href='/index.html'">Home</button>
+  </div>
+
+  <script>
+    const QUAL_COUNT     = 10;
+    const QUAL_THRESHOLD = 7;
+    const MF_TARGET      = 5;
+    const QUESTION_SECS  = 15;
+    const REVEAL_SECS    = 2;   // seconds to show correct answer before next question
+    const TRANSITION_SECS = 5; // seconds on transition screen
+
+    const ALL_VIEWS = ['view-loading','view-start','view-question','view-transition','view-fail-qual','view-fail-mf','view-winner'];
+
+    let questions    = [];
+    let phase        = 'qual';   // 'qual' | 'mindfield'
+    let qIndex       = 0;        // index into questions array
+    let qualScore    = 0;
+    let mfStreak     = 0;
+    let timerInterval = null;
+    let timeLeft     = QUESTION_SECS;
+    let answered     = false;
+
+    // ── Init ─────────────────────────────────
+    async function loadQuestions() {
+      try {
+        const res  = await fetch('/api/solo/questions');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        questions = data.questions;
+        showView('view-start');
+      } catch (e) {
+        document.querySelector('#view-loading .loading-text').textContent = 'Failed to load: ' + e.message;
+      }
+    }
+
+    function startGame() {
+      phase     = 'qual';
+      qIndex    = 0;
+      qualScore = 0;
+      mfStreak  = 0;
+      document.getElementById('phasePill').textContent = 'Qualification';
+      document.getElementById('streakRow').style.display = 'none';
+      showView('view-question');
+      showQuestion();
+    }
+
+    function resetGame() {
+      loadQuestions();
+      showView('view-loading');
+    }
+
+    // ── Question ──────────────────────────────
+    function showQuestion() {
+      answered = false;
+      const q  = questions[qIndex];
+
+      // Update meta
+      if (phase === 'qual') {
+        document.getElementById('qNum').textContent   = `Question ${qIndex + 1}/${QUAL_COUNT}`;
+        document.getElementById('qScore').textContent = `${qualScore} correct`;
+      } else {
+        document.getElementById('qNum').textContent   = `Mind Field`;
+        document.getElementById('qScore').textContent = `${mfStreak}/5 in a row`;
+        updateStreakPips();
+      }
+
+      document.getElementById('qText').textContent = q.question;
+
+      // Render choices
+      document.getElementById('choicesList').innerHTML = q.choices.map((c, i) =>
+        `<button class="choice-btn" id="c${i}" onclick="openConfirm(${i})">${c}</button>`
+      ).join('');
+
+      // Timer
+      resetTimer();
+      startTimer();
+    }
+
+    function selectAnswer(index) {
+      if (answered) return;
+      answered = true;
+      clearInterval(timerInterval);
+
+      const q       = questions[qIndex];
+      const chosen  = q.choices[index];
+      const correct = chosen === q.correct;
+
+      // Style buttons
+      q.choices.forEach((c, i) => {
+        const btn = document.getElementById(`c${i}`);
+        btn.disabled = true;
+        if (c === q.correct) {
+          btn.classList.add('correct');
+        } else if (i === index) {
+          btn.classList.add('wrong', 'selected');
+        } else {
+          btn.classList.add('wrong');
+        }
+      });
+
+      // Update score
+      if (phase === 'qual') {
+        if (correct) qualScore++;
+      } else {
+        if (correct) {
+          mfStreak++;
+          updateStreakPips();
+        }
+      }
+
+      // Advance after reveal delay
+      setTimeout(() => advance(correct), REVEAL_SECS * 1000);
+    }
+
+    function advance(lastCorrect) {
+      if (phase === 'qual') {
+        qIndex++;
+        if (qIndex >= QUAL_COUNT) {
+          // End of qual round
+          if (qualScore >= QUAL_THRESHOLD) {
+            showTransition();
+          } else {
+            document.getElementById('failQualScore').textContent = `${qualScore}/${QUAL_COUNT} correct`;
+            showView('view-fail-qual');
+          }
+        } else {
+          showQuestion();
+        }
+      } else {
+        // Mind Field
+        if (!lastCorrect) {
+          document.getElementById('failMfScore').textContent = `${mfStreak}/5 survived`;
+          showView('view-fail-mf');
+        } else if (mfStreak >= MF_TARGET) {
+          showView('view-winner');
+        } else {
+          qIndex++;
+          showQuestion();
+        }
+      }
+    }
+
+    // ── Transition ────────────────────────────
+    function showTransition() {
+      clearInterval(timerInterval);
+      document.getElementById('transScore').textContent = `${qualScore}/${QUAL_COUNT} correct`;
+      document.getElementById('phasePill').textContent  = 'Mind Field';
+      showView('view-transition');
+
+      let secs = TRANSITION_SECS;
+      document.getElementById('transCountdown').textContent = `Starting in ${secs}...`;
+      const t = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+          clearInterval(t);
+          startMindField();
+        } else {
+          document.getElementById('transCountdown').textContent = `Starting in ${secs}...`;
+        }
+      }, 1000);
+    }
+
+    function startMindField() {
+      phase    = 'mindfield';
+      mfStreak = 0;
+      document.getElementById('streakRow').style.display = 'flex';
+      updateStreakPips();
+      showView('view-question');
+      showQuestion();
+    }
+
+    // ── Streak Pips ───────────────────────────
+    function updateStreakPips() {
+      for (let i = 0; i < 5; i++) {
+        const pip = document.getElementById(`pip-${i}`);
+        pip.className = 'streak-pip' + (i < mfStreak ? ' done' : i === mfStreak ? ' current' : '');
+      }
+    }
+
+    // ── Timer ─────────────────────────────────
+    function resetTimer() {
+      timeLeft = QUESTION_SECS;
+      const fill = document.getElementById('timerFill');
+      if (fill) {
+        fill.style.transition = 'none';
+        fill.style.width = '100%';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          fill.style.transition = 'width 1s linear';
+        }));
+      }
+      document.getElementById('timerNum').textContent = QUESTION_SECS;
+    }
+
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timerNum').textContent = timeLeft;
+        const pct = (timeLeft / QUESTION_SECS) * 100;
+        document.getElementById('timerFill').style.width = pct + '%';
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          if (!answered) timeUp();
+        }
+      }, 1000);
+    }
+
+    function timeUp() {
+      // Auto-select no answer — just reveal correct and move on
+      answered = true;
+      const q = questions[qIndex];
+      q.choices.forEach((c, i) => {
+        const btn = document.getElementById(`c${i}`);
+        btn.disabled = true;
+        if (c === q.correct) btn.classList.add('correct');
+        else btn.classList.add('wrong');
+      });
+      // Time up counts as wrong answer in MF
+      setTimeout(() => advance(correct), 4000);
+    }
+
+    // ── Views ─────────────────────────────────
+    function showView(id) {
+      ALL_VIEWS.forEach(v => {
+        const el = document.getElementById(v);
+        el.classList.toggle('active', v === id);
+      });
+    }
+
+    let pendingIndex = null;
+
+    function openConfirm(index) {
+      if (answered) return;
+      pendingIndex = index;
+      document.getElementById('confirmAnswer').textContent = questions[qIndex].choices[index];
+      document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    function closeConfirm() {
+      pendingIndex = null;
+      document.getElementById('confirmModal').style.display = 'none';
+    }
+
+    function confirmAnswer() {
+      document.getElementById('confirmModal').style.display = 'none';
+      if (pendingIndex === null) return;
+      selectAnswer(pendingIndex);
+    }
+
+    // Start
+    loadQuestions();
+  </script>
+  <div id="confirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;z-index:100;">
+  <div style="background:#1e1e1e;border:1px solid #444;border-radius:16px;padding:24px;width:100%;max-width:360px;text-align:center;">
+    <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:#888;margin-bottom:8px;">Your answer:</div>
+    <div id="confirmAnswer" style="font-family:'Fredoka One',cursive;font-size:1.4rem;color:#fff;background:#2a2a2a;border:1px solid #555;border-radius:999px;padding:12px 20px;margin-bottom:20px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button onclick="closeConfirm()" style="padding:12px;background:transparent;border:1px solid #555;border-radius:999px;font-family:'Fredoka One',cursive;font-size:1rem;color:#fff;cursor:pointer;">Go Back</button>
+      <button onclick="confirmAnswer()" style="padding:12px;background:#E8531A;border:none;border-radius:999px;font-family:'Fredoka One',cursive;font-size:1rem;color:#fff;cursor:pointer;">Confirm</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

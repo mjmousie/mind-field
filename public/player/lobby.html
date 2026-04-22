@@ -63,7 +63,7 @@
     }
     .timer-num {
       font-family:var(--font-display); font-size:1.1rem;
-      color:var(--white); text-shadow:var(--text-shadow-1);font-weight:700;
+      color:var(--white); font-weight:700;
       min-width:28px; text-align:center; flex-shrink:0;
     }
     .timer-track {
@@ -72,7 +72,7 @@
     }
     .timer-fill {
       height:100%; border-radius:6px;
-      background:#F4AAAA;
+      background:#f06000;
       width:100%;
     }
 
@@ -96,10 +96,10 @@
 
     .choices-list { display:flex; flex-direction:column; gap:10px; width:100%; padding:0 4px; box-sizing:border-box; flex-shrink:0; }
     .choice-btn {
-      width:100%; padding:14px 18px; border:2px solid var(--black);
+      width:100%; padding:14px 18px; border:1px solid var(--black);
       border-radius:var(--radius-pill); font-family:var(--font-body); font-weight:700;
       font-size:0.95rem; text-align:left; cursor:pointer;
-      background:var(--salmon); color:var(--black);
+      background:var(--salmon); color:var(--white);
       transition:background 0.2s, transform 0.15s, box-shadow 0.2s;
       animation:fadeSlideIn 0.3s ease both;
     }
@@ -109,9 +109,10 @@
     .choice-btn:nth-child(4){animation-delay:0.18s}
     .choice-btn:active:not(:disabled) { transform:scale(0.97); }
     .choice-btn:disabled { cursor:not-allowed; }
-    .choice-btn.selected { background:#d45f5f; box-shadow:0 0 0 3px var(--black); }
-    .choice-btn.wrong    { background:var(--black); color:var(--white); box-shadow:none; }
-    .choice-btn.correct  { background:var(--salmon); box-shadow:0 0 0 3px var(--black); }
+    .choice-btn.selected      { background:#c53b05; box-shadow:0 0 0 2px var(--white); }
+    .choice-btn.wrong         { background:var(--salmon); color:var(--white); box-shadow:none; }
+    .choice-btn.wrong.selected{ background:#c53b05; color:var(--white); box-shadow:0 0 0 2px var(--black); }
+    .choice-btn.correct       { background:#15ff00; color:var(--white); box-shadow:0 0 0 2px var(--black); }
 
     /* ── CONFIRM MODAL ───────────────────────── */
     .modal-backdrop {
@@ -132,18 +133,18 @@
       margin-bottom:env(safe-area-inset-bottom, 0px);
       animation:modalSlideUp 0.28s cubic-bezier(0.34,1.56,0.64,1) both;
     }
-    .modal-question { font-family:var(--font-display); font-size:1rem; color:var(--black); margin-bottom:6px; }
+    .modal-question { font-family:var(--font-display); font-size:1rem; color:var(--white); margin-bottom:6px; }
     .modal-selected-answer { font-family:var(--font-display); font-size:1.3rem; color:var(--white); text-shadow: var(--text-shadow-1); padding:10px 18px; text-align:center; margin-bottom:18px; }
     .modal-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .modal-actions .btn { padding:12px; font-size:0.95rem; width:100%; justify-content:center; }
-    .btn-goback  { background:transparent; border:var(--border); color:var(--black); }
-    .btn-confirm { background:var(--salmon); border:var(--border); color:var(--black); box-shadow:var(--shadow); }
+    .btn-goback  { background:transparent; border:var(--border); color:var(--white); }
+    .btn-confirm { background:var(--salmon); border:var(--border); color:var(--white); box-shadow:var(--shadow); }
     .btn-confirm:active { transform:translateY(2px); box-shadow:none; }
 
     /* ── REVEAL OVERLAY ──────────────────────── */
     .reveal-overlay {
       display:none; position:absolute; inset:0;
-      background:rgba(20,130,180,0.88); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      background:rgba(0, 0, 0, 0.88); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
       align-items:center; justify-content:center; z-index:40;
       animation:backdropIn 0.3s ease both;
     }
@@ -158,20 +159,20 @@
     #view-qual-result { align-items:center; justify-content:center; gap:16px; padding:40px 24px; text-align:center; flex:1; min-height:0; }
     .qual-result-icon { font-size:4rem; line-height:1; animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
     .qual-result-title { font-family:var(--font-display); font-size:2.8rem; color:var(--white); text-shadow:4px 4px 0 var(--black); animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.05s both; }
-    .qual-score-display { font-family:var(--font-display); font-size:1.6rem; color:var(--black); animation:fadeSlideIn 0.4s ease 0.15s both; }
-    .qual-wait-msg { font-family:var(--font-display); font-size:0.95rem; color:rgba(0,0,0,0.6); animation:fadeSlideIn 0.4s ease 0.25s both; }
+    .qual-score-display { font-family:var(--font-display); font-size:1.6rem; color:var(--white); animation:fadeSlideIn 0.4s ease 0.15s both; }
+    .qual-wait-msg { font-family:var(--font-display); font-size:0.95rem; color:white; animation:fadeSlideIn 0.4s ease 0.25s both; }
 
     /* ── QUAL TRANSITION ─────────────────────── */
     #view-qual-transition { align-items:center; justify-content:center; gap:18px; padding:40px 24px; text-align:center; flex:1; min-height:0; }
     .qt-icon  { font-size:4rem; line-height:1; animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both; }
     .qt-title { font-family:var(--font-display); font-size:2.4rem; color:var(--white); text-shadow:4px 4px 0 var(--black); animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both; }
-    .qt-sub   { font-family:var(--font-display); font-size:1.1rem; color:var(--black); animation:fadeSlideIn 0.4s ease 0.25s both; }
+    .qt-sub   { font-family:var(--font-display); font-size:1.1rem; color:var(--white); animation:fadeSlideIn 0.4s ease 0.25s both; }
     .qt-score { font-family:var(--font-display); font-size:2rem; color:var(--white); text-shadow:3px 3px 0 var(--black); animation:fadeSlideIn 0.4s ease 0.3s both; }
 
     /* ── CORRECT ─────────────────────────────── */
     #view-correct { gap:20px; padding:40px 24px; text-align:center; flex:1; min-height:0; align-items:center; justify-content:center; }
     .correct-title { font-family:var(--font-display); font-size:4rem; color:var(--white); text-shadow:4px 4px 0 var(--black); animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
-    .next-round-msg  { font-family:var(--font-display); font-size:1.2rem; color:var(--black); }
+    .next-round-msg  { font-family:var(--font-display); font-size:1.2rem; color:var(--white); }
     .next-round-time { font-family:var(--font-display); font-size:3rem; color:var(--white); text-shadow:3px 3px 0 var(--black); }
 
     /* ── WRONG (mindfield elimination) ──────── */
@@ -179,6 +180,10 @@
     .wrong-title { font-family:var(--font-display); font-size:4rem; color:var(--white); text-shadow:4px 4px 0 rgba(0,0,0,0.35); animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
     .wrong-sub   { font-family:var(--font-display); font-size:1.3rem; color:var(--white); text-shadow:1px 1px 0 rgba(0,0,0,0.2); }
     #view-wrong .btn-outline { background: var(--salmon); color:var(--white); text-shadow: var(--text-shadow-1); max-width:220px; }
+    
+    .countdown-bar {
+      color: white;
+    }
 
     /* ── WINNER ──────────────────────────────── */
     #view-winner { gap:16px; padding:40px 24px; text-align:center; flex:1; min-height:0; align-items:center; justify-content:center; }
@@ -186,6 +191,12 @@
     .winner-title { font-family:var(--font-display); font-size:4rem; color:var(--white); text-shadow:4px 4px 0 var(--black); animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.2s both; }
     .winner-sub   { font-family:var(--font-display); font-size:1.1rem; color:var(--black); animation:fadeSlideIn 0.4s ease 0.35s both; }
     #view-winner .btn-outline { max-width:220px; }
+    #view-cancelled { gap:16px; padding:40px 24px; text-align:center; flex:1; min-height:0; align-items:center; justify-content:center; }
+    .cancelled-icon  { font-size:3.5rem; line-height:1; }
+    .cancelled-title { font-family:var(--font-display); font-size:2.2rem; color:var(--white); text-shadow:3px 3px 0 var(--black); }
+    .cancelled-sub   { font-family:var(--font-display); font-size:1rem; color:var(--black); }
+    .qual-break-timer { font-family:var(--font-display); font-size:4rem; color:var(--white); text-shadow:3px 3px 0 var(--black); line-height:1; animation:popIn 0.3s ease both; }
+    .qt-countdown { font-family:var(--font-display); font-size:4rem; color:var(--white); text-shadow:3px 3px 0 var(--black); line-height:1; }
   </style>
 </head>
 <body>
@@ -243,7 +254,8 @@
     <div class="qual-result-icon" id="qualResultIcon">✓</div>
     <div class="qual-result-title" id="qualResultTitle">Correct!</div>
     <div class="qual-score-display" id="qualScoreDisplay"></div>
-    <div class="qual-wait-msg">Next question coming up...</div>
+    <div class="qual-wait-msg">Next question coming up in...</div>
+    <div class="qual-break-timer" id="qualBreakTimer">8</div>
   </div>
 
   <!-- QUAL TRANSITION (qualified / not qualified) -->
@@ -251,7 +263,8 @@
     <div class="qt-icon"  id="qtIcon">🎯</div>
     <div class="qt-title" id="qtTitle">You Qualified!</div>
     <div class="qt-score" id="qtScore"></div>
-    <div class="qt-sub"   id="qtSub">Advancing to Mind Field...</div>
+    <div class="qt-sub"   id="qtSub">Advancing to Mind Field Round in...</div>
+    <div class="qt-countdown" id="qtCountdown"></div>
     <button class="btn btn-outline" id="qtLeaveBtn" onclick="leaveRoom()" style="display:none;max-width:220px;">Leave Room</button>
   </div>
 
@@ -266,7 +279,7 @@
   <div id="view-wrong" class="view">
     <div class="wrong-title">Wrong!</div>
     <div class="wrong-sub">Try again next round.</div>
-    <button class="btn btn-outline" onclick="leaveRoom()">Leave Room</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">Leave Room</button>
   </div>
 
   <!-- WINNER -->
@@ -274,7 +287,13 @@
     <div class="trophy">🏆</div>
     <div class="winner-title">Winner!</div>
     <div class="winner-sub" id="winnerSub"></div>
-    <button class="btn btn-outline" onclick="leaveRoom()">Leave Room</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">Leave Room</button>
+  </div>
+
+    <div id="view-cancelled" class="view">
+    <div class="cancelled-icon">🚫</div>
+    <div class="cancelled-title">Game Cancelled</div>
+    <div class="cancelled-sub">Redirecting you to the home screen...</div>
   </div>
 
   <!-- ERROR -->
@@ -302,9 +321,20 @@
     let totalStarted   = 0;
     let myQualScore    = 0;
 
-    const ALL_VIEWS = ['view-lobby','view-question','view-qual-result','view-qual-transition','view-correct','view-wrong','view-winner','view-error'];
+    const ALL_VIEWS = ['view-lobby','view-question','view-qual-result','view-qual-transition','view-correct','view-wrong','view-winner','view-error','view-cancelled'];
 
-    const socket = io();
+    const socket = io({
+      reconnection:      true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      timeout: 45000
+    });
+
+      // On reconnect, re-announce ourselves to the server
+      socket.io.on('reconnect', () => {
+        console.log('[Socket] Reconnected — re-joining room');
+        socket.emit('player:reconnect', { roomKey, nickname });
+      });
     const playerToken = localStorage.getItem('mf_player_token') || null;
     socket.emit('player:join', { roomKey, nickname, playerToken });
 
@@ -350,13 +380,13 @@
       if (fillReset) {
         fillReset.style.transition = 'none';
         fillReset.style.width = '100%';
-        fillReset.style.background = '#F4AAAA';
+        fillReset.style.background = '#f06000';
         requestAnimationFrame(() => requestAnimationFrame(() => {
           fillReset.style.transition = 'width 1s linear, background 1s linear';
         }));
       }
       document.getElementById('timerNum').textContent = 15;
-      document.getElementById('timerNum').style.color = 'var(--black)';
+      document.getElementById('timerNum').style.color = 'var(--white)';
 
       document.getElementById('questionNum').textContent  =
         phase === 'qualification' ? `Question ${round}/${totalRounds}` : `Question #${round}`;
@@ -408,9 +438,8 @@
         const btn = document.getElementById(`choice-${i}`);
         if (!btn) return;
         btn.disabled = true;
-        btn.classList.remove('selected');
         btn.classList.toggle('correct', c === correctAnswer);
-        btn.classList.toggle('wrong',   c !== correctAnswer);
+        btn.classList.toggle('wrong',   c !== correctAnswer && !btn.classList.contains('selected'));
       });
     });
 
@@ -429,13 +458,13 @@
     });
 
     // ── Qualification ended ───────────────────
-    socket.on('game:qualification-end', ({ qualifiers, threshold, allScores }) => {
+    socket.on('game:qualification-end', ({ qualifiers, threshold, allScores, totalRounds }) => {
       const qualified = qualifiers.some(q => q.nickname === nickname);
       const myScore   = allScores.find(s => s.nickname === nickname)?.score ?? myQualScore;
 
-      document.getElementById('qtIcon').textContent  = qualified ? '🎯' : '😔';
-      document.getElementById('qtTitle').textContent = qualified ? 'You Qualified!' : 'Not This Time';
-      document.getElementById('qtScore').textContent = `${myScore} / 10 correct`;
+      document.getElementById('qtIcon').textContent  = qualified ? '👍' : '👎';
+      document.getElementById('qtTitle').textContent = qualified ? 'You Qualified!' : 'Better Luck Next Time';
+      document.getElementById('qtScore').textContent = `${myScore} / ${totalRounds} correct`;
       document.getElementById('qtSub').textContent   = qualified
         ? 'Advancing to Mind Field...'
         : `Needed ${threshold}+ correct to advance`;
@@ -471,8 +500,20 @@
     });
 
     socket.on('game:break', ({ seconds }) => {
-      const el = document.getElementById('nextRoundTime');
-      if (el) el.textContent = seconds;
+      // MF correct screen countdown
+      const mfEl = document.getElementById('nextRoundTime');
+      if (mfEl) mfEl.textContent = seconds;
+
+      // Qual break countdown on qual-result screen
+      const qualEl = document.getElementById('qualBreakTimer');
+      if (qualEl) qualEl.textContent = seconds;
+    });
+
+    socket.on('game:transition', ({ seconds }) => {
+      const el = document.getElementById('qtCountdown');
+      if (!el) return;
+      if (seconds > 0) el.textContent = seconds;
+      else el.textContent = '';
     });
 
     socket.on('player:winner', ({ totalPlayers, outlasted }) => {
@@ -499,7 +540,12 @@
       }
     });
 
-    socket.on('room:cancelled', () => window.location.href = '/player/index.html');
+    socket.on('room:cancelled', () => {
+      ALL_VIEWS.forEach(v => document.getElementById(v).classList.remove('active'));
+      document.body.style.background = 'var(--sky)';
+      document.getElementById('view-cancelled').classList.add('active');
+      setTimeout(() => window.location.href = '/player/index.html', 3000);
+    });
 
     function showError(message) {
       document.getElementById('errorMsg').textContent = message;

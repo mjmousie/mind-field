@@ -5,11 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mind Field — Game Room</title>
   <link rel="stylesheet" href="/shared/style.css"/>
-  <link rel="stylesheet" href="/public/host/css/cancelModal.css">
-  <link rel="stylesheet" href="/public/host/css/gameRoom.css">
-</head>
-<style>
-      html, body { width:100%; height:100%; overflow:hidden; font-size:18px; }
+  <style>
+    html, body { width:100%; height:100%; overflow:hidden; font-size:22px; }
     body { display:flex; flex-direction:column; }
 
     /* ── HEADER ──────────────────────────────── */
@@ -23,62 +20,60 @@
     .header-logo-wrap {
       display:flex; align-items:center; gap:8px; text-decoration:none;
     }
-    .header-logo { width:44px; height:44px; flex-shrink:0; }
+    .header-logo { width:56px; height:56px; flex-shrink:0; }
     .header-logo-text {
-      font-family:var(--font-display); font-size:1.5rem;
-      color:var(--black); letter-spacing:0.5px;
+      font-family:var(--font-display); font-size:2rem;
+      color:var(--white); letter-spacing:0.5px;
     }
     .header-title-wrap {
       flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
     }
     .header-fs-wrap { position:relative; display:flex; align-items:center; flex-shrink:0; }
-    .fs-btn { background:none; border:none; cursor:pointer; font-size:1.6rem; line-height:1; color:var(--black); padding:4px 8px; border-radius:var(--radius-sm); transition:background 0.15s; }
+    .fs-btn { background:none; border:none; cursor:pointer; font-size:1.6rem; line-height:1; color:var(--white); padding:4px 8px; border-radius:var(--radius-sm); transition:background 0.15s; }
     .fs-btn:hover { background:rgba(0,0,0,0.1); }
     .fs-tooltip { display:none; position:absolute; top:calc(100% + 6px); right:0; background:var(--black); color:var(--white); font-size:0.75rem; font-weight:700; padding:5px 10px; border-radius:var(--radius-sm); white-space:nowrap; pointer-events:none; z-index:999; }
     .header-fs-wrap:hover .fs-tooltip { display:block; }
     .game-title {
-      font-family:var(--font-display); font-size:3rem;
+      font-family:var(--font-display); font-size:3.6rem;
       color:var(--white); text-shadow: var(--text-shadow-2); line-height:1.1;
     }
-    .badge-row { display:flex; gap:10px; align-items:center; margin: 12px 0; }
+    .badge-row { display:flex; gap:10px; align-items:center; }
     .category-badge {
       display:inline-block; background:var(--salmon);
-      border:none; border-radius:var(--radius-pill);
-      padding:8px 24px; font-weight:800; font-size:0.8rem;
-      color: var(--white); text-shadow:var(--text-shadow-1);
+      border:var(--border); border-radius:var(--radius-pill);
+      padding:5px 24px; font-weight:800; font-size:1rem;
     }
     .phase-badge {
       display:inline-block; background:var(--sky-card);
-      border:none; border-radius:var(--radius-pill);
-      padding:8px 24px; font-weight:800; font-size:0.8rem;
-      color: var(--white); text-shadow:var(--text-shadow-1);
+      border:var(--border); border-radius:var(--radius-pill);
+      padding:5px 18px; font-weight:800; font-size:0.88rem;
     }
 
     /* ── 3-COLUMN BODY ───────────────────────── */
     .game-body {
       flex:1; display:grid;
-      grid-template-columns:260px 1fr 220px;
+      grid-template-columns:340px 1fr 300px;
       gap:16px; padding:8px 20px 20px; min-height:0;
     }
 
     /* ── SIDEBAR ─────────────────────────────── */
     .sidebar {
-      background:var(--sky-card); border:none;
+      background:var(--sky-card);
       border-radius:var(--radius-md); padding:14px 16px;
       overflow-y:auto; display:flex; flex-direction:column;
       scrollbar-width:none;
       -ms-overflow-style:none;
     }
     .sidebar::-webkit-scrollbar { display:none; }
-    .sidebar-title { font-weight:800; font-size:1.2rem; margin-bottom:10px; flex-shrink:0; color: white; text-shadow: var(--text-shadow-1); }
-    .player-item { font-size:0.9rem; font-weight:600; padding:5px 0; color: white; text-shadow: 1px 1px 0 var(--black); display:flex; justify-content:space-between; align-items:center; }
-    .player-item.out .p-name { color:rgba(255, 255, 255, 0.4); }
-    .out-tag { color:black; font-weight:800; font-size:0.78rem; margin-left:4px; }
-    .p-score { font-weight:800; font-size:0.85rem; background:var(--salmon); border:1px solid #111; border-radius:var(--radius-pill); padding:1px 8px; }
+    .sidebar-title { font-weight:800; font-size:1.5rem; margin-bottom:12px; flex-shrink:0; color: white; text-shadow: var(--text-shadow-1); }
+    .player-item { font-size:1.1rem; font-weight:600; padding:7px 0; color: white; display:flex; justify-content:space-between; align-items:center; }
+    .player-item.out .p-name { color:salmon; }
+    .out-tag { color:white; font-weight:800; font-size:0.78rem; margin-left:4px; }
+    .p-score { font-weight:800; font-size:1rem; background:var(--salmon); border:1px solid #111; border-radius:var(--radius-pill); padding:2px 12px; }
 
     /* ── MAIN PANEL ──────────────────────────── */
     .main-panel {
-      background:var(--sky-card); border:none;
+      background:var(--sky-card);
       border-radius:var(--radius-md); padding:20px 28px;
       position:relative; display:flex; flex-direction:column; min-height:0;
     }
@@ -99,34 +94,34 @@
     .error-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
     .info-box { background:var(--sky-card); border-radius:var(--radius-md); padding:12px 16px; text-align: center; }
-    .info-box-label { font-weight:800; font-size:1.2rem; margin-bottom:4px; color: white; text-shadow: var(--text-shadow-1); }
-    .info-box-value { font-weight:900; font-size:1.5rem; color:var(--white); text-shadow: 2px 2px 0 var(--black); }
+    .info-box-label { font-weight:800; font-size:1.5rem; margin-bottom:6px; color: white; text-shadow: var(--text-shadow-1); }
+    .info-box-value { font-weight:700; font-size:1.2rem; }
     /* ── Circular countdown timer ───────────── */
     .timer-wrap {
       display:flex; flex-direction:column; align-items:center; gap:4px;
     }
     .timer-svg-wrap {
-      position:relative; width:120px; height:120px; margin:0 auto;
+      position:relative; width:130px; height:130px; margin:0 auto;
     }
     .timer-svg {
-      width:120px; height:120px;
+      width:130px; height:130px;
       transform:rotate(-90deg);
     }
     .timer-track {
       fill:none; stroke:rgba(0,0,0,0.12); stroke-width:8;
     }
     .timer-arc {
-      fill:none; stroke:#F4AAAA; stroke-width:8;
+      fill:none; stroke:var(--salmon); stroke-width:10;
       stroke-linecap:round;
-      stroke-dasharray:263.9;
+      stroke-dasharray:351.9;
       stroke-dashoffset:0;
       transition:stroke-dashoffset 0.9s linear;
     }
     .timer-number {
       position:absolute; inset:0;
       display:flex; align-items:center; justify-content:center;
-      font-family:var(--font-display); font-size:2.3rem;
-      color:var(--white); text-shadow:var(--text-shadow-1);
+      font-family:var(--font-display); font-size:3rem;
+      color:var(--white);
     }
 
     /* ── PREVIEW ─────────────────────────────── */
@@ -139,17 +134,17 @@
     .preview-actions .btn { font-size:1rem; padding:12px 32px; }
 
     /* ── QUESTION ────────────────────────────── */
-    .question-label { font-weight:800; font-size:1.1rem; margin-bottom:10px; flex-shrink:0; color:var(--white); text-shadow: var(--text-shadow-1); }
+    .question-label { font-weight:800; font-size:0.95rem; margin-bottom:10px; flex-shrink:0; }
     .question-text { font-family:var(--font-display); font-size:3.04rem; line-height:1.25; flex:1; overflow-y:auto; text-align:center; color:var(--white); text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; display:flex; align-items:center; justify-content:center; }
     .choices-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; flex-shrink:0; }
     .choice-btn {
-      padding:14px 20px; border:var(--border); border-radius:var(--radius-pill);
-      font-family:var(--font-body); font-weight:700; font-size:1.3rem;
-      text-align:center; background:var(--salmon); color:var(--black);
+      padding:16px 24px; border:var(--border); border-radius:var(--radius-pill);
+      font-family:var(--font-body); font-weight:700; font-size:1.2rem;
+      text-align:center; background:var(--salmon); color:var(--white);
       transition: background 0.3s;
     }
-    .choice-btn.correct { background:var(--salmon); border: 8px solid var(--black); }
-    .choice-btn.wrong   { background:var(--black); color:var(--white); }
+    .choice-btn.correct { background:#58dd2f; color:var(--black); border-color:#111; }
+    .choice-btn.wrong   { background:var(--salmon); color:var(--black); }
 
     /* ── REVEAL INTRO OVERLAY ────────────────── */
     @keyframes backdropIn  { from{opacity:0} to{opacity:1} }
@@ -157,7 +152,7 @@
 
     .reveal-intro-overlay {
       display:none; position:absolute; inset:0; border-radius:var(--radius-md);
-      background:rgba(20,130,180,0.82); backdrop-filter:blur(10px);
+      background:rgba(0, 0, 0, 0.82); backdrop-filter:blur(10px);
       -webkit-backdrop-filter:blur(10px);
       align-items:center; justify-content:center; z-index:20;
       animation:backdropIn 0.3s ease both;
@@ -178,18 +173,18 @@
     .next-round-overlay.show { display:flex; }
     .next-round-circle {
       width:260px; height:260px; border-radius:50%; background:var(--sky);
-      display:flex; flex-direction:column;
+      border:3px solid var(--black); display:flex; flex-direction:column;
       align-items:center; justify-content:center; gap:4px;
     }
-    .next-round-label { font-family:var(--font-display); font-size:1.2rem; color:var(--black); }
-    .next-round-timer { font-family:var(--font-display); font-size:4.5rem; color:var(--black); text-shadow:2px 2px 0 rgba(0,0,0,0.15); line-height:1; }
+    .next-round-label { font-family:var(--font-display); font-size:1.2rem; color:var(--white); }
+    .next-round-timer { font-family:var(--font-display); font-size:4.5rem; color:var(--white); text-shadow:2px 2px 0 rgba(0,0,0,0.15); line-height:1; }
 
     /* ── TRANSITION OVERLAY ──────────────────── */
     @keyframes fadeSlideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 
     .transition-overlay {
       display:none; position:fixed; inset:0; z-index:200;
-      background:rgba(15,100,145,0.92); backdrop-filter:blur(12px);
+      background:rgba(0, 0, 0, 0.92); backdrop-filter:blur(12px);
       -webkit-backdrop-filter:blur(12px);
       flex-direction:column; align-items:center; justify-content:center; gap:20px;
       animation:backdropIn 0.4s ease both;
@@ -204,7 +199,6 @@
     .transition-subtitle {
       font-family:var(--font-display); font-size:1.2rem;
       color:rgba(255,255,255,0.85); text-align:center;
-      text-shadow: var(text-shadow);
     }
     .qualifier-list {
       display:flex; flex-wrap:wrap; gap:10px; justify-content:center;
@@ -233,7 +227,7 @@
       to   { opacity:1; transform:translateY(0); }
     }
     .promo-box {
-      background:var(--sky-card); border:none;
+      background:var(--sky-card); border:var(--border);
       border-radius:var(--radius-md); padding:16px 16px 14px;
       flex:1;
       display:flex; flex-direction:column;
@@ -244,7 +238,7 @@
     /* Top: HOST / VENUE label */
     .promo-type-label {
       font-size:1rem; font-weight:800; text-transform:uppercase;
-      letter-spacing:2px; color:rgba(0,0,0,0.5);
+      letter-spacing:2px; color:rgb(255, 255, 255);
       flex-shrink:0;
       display: none;
     }
@@ -257,20 +251,20 @@
     }
     .promo-headline {
       font-family:var(--font-display); font-size:2rem;
-      color:var(--white); text-shadow:2px 2px 0 var(--black);
+      color:var(--white); text-shadow:2px 2px 0 var(--white);
       line-height:1.1;
       margin-bottom: 16px;
     }
     .promo-days {
       font-size:1.2rem; font-weight:700;
-      color:rgba(0,0,0,0.6); line-height:1.2;
+      color: var(--white); line-height:1.2;
     }
     .promo-time {
       font-size:1.2rem; font-weight:700;
-      color:rgba(0,0,0,0.6); line-height:1.2;
+      color:var(--white); line-height:1.2;
     }
     .promo-desc {
-      font-size:1.3rem; font-weight:700; color:var(--black);
+      font-size:1.3rem; font-weight:700; color:var(--white);
       line-height:1.3;
       margin-top: 16px;
     }
@@ -304,7 +298,27 @@
     }
     .qual-pip.done    { background:var(--salmon); }
     .qual-pip.current { background:var(--white); }
-</style>
+    .cancel-modal-backdrop {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.55); backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  align-items:center; justify-content:center;
+  z-index:300;
+}
+.cancel-modal-backdrop.show { display:flex; }
+.cancel-modal-card {
+  background:var(--sky-card); border:var(--border);
+  border-radius:var(--radius-lg); padding:28px 24px;
+  width:calc(100% - 48px); max-width:420px; text-align:center;
+}
+.cancel-modal-title {
+  font-family:var(--font-display); font-size:1.6rem;
+  color:var(--white); text-shadow:2px 2px 0 var(--black); margin-bottom:10px;
+}
+.cancel-modal-sub { font-size:0.9rem; font-weight:700; color:var(--black); margin-bottom:24px; }
+.cancel-modal-actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  </style>
+</head>
 <body>
   <div class="game-header">
     <div class="header-nav">
@@ -315,7 +329,6 @@
       <div class="header-title-wrap">
         <div class="game-title" id="headerTitle">Loading...</div>
         <div class="badge-row">
-          <div class="category-badge" id="headerCategory"></div>
           <div class="phase-badge"    id="phaseBadge">Qualification Round</div>
         </div>
       </div>
@@ -393,14 +406,15 @@
         <div class="info-box-label">Timer</div>
         <div class="timer-wrap">
           <div class="timer-svg-wrap">
-            <svg class="timer-svg" viewBox="0 0 96 96">
-              <circle class="timer-track" cx="48" cy="48" r="42"/>
-              <circle class="timer-arc"   cx="48" cy="48" r="42" id="timerArc"/>
+            <svg class="timer-svg" viewBox="0 0 130 130">
+              <circle class="timer-track" cx="65" cy="65" r="56"/>
+              <circle class="timer-arc"   cx="65" cy="65" r="56" id="timerArc"/>
             </svg>
             <div class="timer-number" id="timerDisplay">15</div>
           </div>
+         </div>
         </div>
-      </div>
+      <button class="btn btn-outline" onclick="cancelRoom()" style="margin-top:auto;">Cancel Game</button>
     </div>
   </div>
 
@@ -415,7 +429,7 @@
       <div class="winner-panel">
         <div class="winner-congrats" id="winnerCongrats">Congratulations!</div>
         <div class="winner-name"     id="winnerName"></div>
-        <div class="new-game-msg"    id="newGameMsg">You are the Mind Field Champion... or something</div>
+        <div class="new-game-msg"    id="newGameMsg">A new game will be starting soon...</div>
       </div>
     </div>
     <div class="right-panel">
@@ -465,7 +479,6 @@
     let currentRound   = 0;
 
     document.getElementById('headerTitle').textContent     = roomData.roomName    || '';
-    document.getElementById('headerCategory').textContent  = roomData.categoryName || '';
     document.getElementById('qrImage').src                 = roomData.qrCode      || '';
     document.getElementById('roomKeyDisplay').textContent  = roomData.roomKey     || '';
     document.getElementById('hostNameDisplay').textContent = hostData.displayName || '';
@@ -513,17 +526,7 @@
       document.getElementById('questionLabel').textContent = `Question #${round}`;
       document.getElementById('questionText').textContent  = question;
       document.getElementById('roundDisplay').textContent  = round;
-      
-      const arcReset = document.getElementById('timerArc');
-      if (arcReset) {
-        arcReset.style.transition = 'none';
-        arcReset.style.strokeDashoffset = '0';
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          arcReset.style.transition = 'stroke-dashoffset 0.9s linear';
-        }));
-      }
-      document.getElementById('timerDisplay').textContent = timer;
-
+      updateTimer(timer, timer);
       document.getElementById('revealIntroOverlay').classList.remove('show');
       document.getElementById('nextRoundOverlay').classList.remove('show');
 
@@ -549,18 +552,13 @@
     });
 
     function updateTimer(timeLeft, total) {
-      const CIRCUMFERENCE = 263.9;
+      const CIRCUMFERENCE = 351.9;
       const arc   = document.getElementById('timerArc');
       const numEl = document.getElementById('timerDisplay');
       if (!arc || !numEl) return;
 
       const progress = timeLeft / total;
       arc.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
-
-      // Light pink → red as time runs out
-      const r = Math.round(244 - (244 - 224) * (1 - progress));
-      const g = Math.round(170 - (170 -  68) * (1 - progress));
-      const b = Math.round(170 - (170 -  68) * (1 - progress));
       numEl.textContent = timeLeft;
     }
 
@@ -588,10 +586,11 @@
       if (seconds === 0) document.getElementById('nextRoundOverlay').classList.remove('show');
     });
 
-    socket.on('game:qualification-end', ({ qualifiers, threshold, allScores }) => {
+    socket.on('game:qualification-end', ({ qualifiers, threshold, allScores, totalRounds }) => {
       // Clear the question display so last question doesn't show behind overlay
-      document.getElementById('questionText').textContent = '';
+      const questionText = document.getElementById('questionText');
       const questionNum  = document.getElementById('questionNum');
+      if (questionText) questionText.textContent = '';
       if (questionNum)  questionNum.textContent  = '';
       const choicesList = document.getElementById('choicesList');
       if (choicesList) choicesList.innerHTML = '';
@@ -605,7 +604,7 @@
 
       document.getElementById('qualifierList').innerHTML = qualifiers.map((q, i) =>
         `<div class="qualifier-chip" style="animation-delay:${i * 0.08}s">
-          ${esc(q.nickname)} <span style="opacity:0.7;font-weight:600">${q.score}/10</span>
+          ${esc(q.nickname)} <span style="opacity:0.7;font-weight:600">${q.score}/${totalRounds}</span>
         </div>`
       ).join('');
     });
@@ -616,8 +615,14 @@
     });
 
     socket.on('game:mindfield-start', () => {
-    document.getElementById('phaseBadge').textContent = 'Mind Field Round';
-      // Overlay stays up until game:question fires and renders the first MF question
+      document.getElementById('phaseBadge').textContent = 'Mind Field Round';
+      // Clear question display while waiting for first MF question
+      const qt = document.getElementById('questionText');
+      const ql = document.getElementById('questionLabel');
+      const cg = document.getElementById('choicesList');
+      if (qt) qt.textContent = '';
+      if (ql) ql.textContent = '';
+      if (cg) cg.innerHTML = '';
     });
 
     socket.on('game:eliminations', ({ playerList: pl, activeCount, totalStarted: ts }) => {
@@ -668,17 +673,17 @@
       btn.disabled = true; btn.textContent = 'Starting...';
       socket.emit('host:start', { roomKey: roomData.roomKey, token });
     }
-      function cancelRoom() {
-    document.getElementById('cancelModal').classList.add('show');
-  }
-  function closeCancelModal() {
-    document.getElementById('cancelModal').classList.remove('show');
-  }
-  function confirmCancel() {
-    socket.emit('host:cancel-room', { roomKey: roomData.roomKey, token });
-    localStorage.removeItem('mf_room');
-    window.location.href = '/host/dashboard.html';
-  }
+    function cancelRoom() {
+      document.getElementById('cancelModal').classList.add('show');
+    }
+    function closeCancelModal() {
+      document.getElementById('cancelModal').classList.remove('show');
+    }
+    function confirmCancel() {
+      socket.emit('host:cancel-room', { roomKey: roomData.roomKey, token });
+      localStorage.removeItem('mf_room');
+      window.location.href = '/host/dashboard.html';
+    }
     function exitGame() {
       socket.emit('host:exit', { roomKey: roomData.roomKey, token });
       localStorage.removeItem('mf_room');
@@ -695,7 +700,7 @@
       const el = document.getElementById(containerId);
       if (!el) return;
       if (!players || !players.length) {
-        el.innerHTML = '<div class="player-item"><span class="p-name" style="color:black;font-style:italic">Waiting...</span></div>';
+        el.innerHTML = '<div class="player-item"><span class="p-name" style="color:white;font-style:italic">Waiting...</span></div>';
         return;
       }
       el.innerHTML = players.map(p => `

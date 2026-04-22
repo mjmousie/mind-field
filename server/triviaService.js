@@ -1,12 +1,6 @@
 const https = require('https');
 const db    = require('./db');
 
-// ─────────────────────────────────────────────
-// The Trivia API v2  (the-trivia-api.com)
-// Free, no API key required
-// US-region filter + used-question deduplication
-// ─────────────────────────────────────────────
-
 const BASE_URL = 'https://the-trivia-api.com/v2/questions';
 
 const CATEGORIES = [
@@ -22,9 +16,16 @@ const CATEGORIES = [
   { id: 'arts_and_literature', name: 'Arts & Literature'   },
 ];
 
-// ─────────────────────────────────────────────
-// FETCH HELPER
-// ─────────────────────────────────────────────
+const CUSTOM_PREFIX = 'custom:';
+
+function isCustomCategory(slug) {
+  return slug && slug.startsWith(CUSTOM_PREFIX);
+}
+
+function customCategoryName(slug) {
+  return slug.replace(CUSTOM_PREFIX, '');
+}
+
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
@@ -39,12 +40,18 @@ function httpsGet(url) {
 }
 
 async function getCategories() {
-  return CATEGORIES;
+  const customCats = await db.getCustomCategories();
+  const customList = customCats.map(c => ({
+    id:   CUSTOM_PREFIX + c,
+    name: c + ' ★'
+  }));
+  return [
+    { id: 'all', name: '🎲 All Categories (Mixed)' },
+    ...CATEGORIES,
+    ...customList
+  ];
 }
 
-// ─────────────────────────────────────────────
-// FETCH QUESTIONS
-// ─────────────────────────────────────────────
 async function fetchQuestions(categorySlug, difficulty, limit) {
   const params = new URLSearchParams({
     limit:        String(limit),
@@ -76,28 +83,71 @@ async function fetchQuestions(categorySlug, difficulty, limit) {
   })).filter(q => q.question && q.correct);
 }
 
-// ─────────────────────────────────────────────
-// BUILD POOL
-// Filters out previously used questions.
-// If too many have been used, resets the history
-// for that category so the pool never runs dry.
-// ─────────────────────────────────────────────
+async function buildAllCategoriesPool(target) {
+  console.log(`[Trivia] Building mixed pool — ${target} questions across all categories`);
+  const slugs  = CATEGORIES.map(c => c.id);
+  const perCat = Math.ceil(target / slugs.length);
+  const all    = [];
+
+  for (const slug of slugs) {
+    try {
+      const qs = await fetchQuestions(slug, 'medium', perCat);
+      all.push(...qs);
+      await new Promise(r => setTimeout(r, 200));
+    } catch {}
+  }
+
+  const seen   = new Set();
+  const unique = all.filter(q => {
+    if (seen.has(q.question)) return false;
+    seen.add(q.question);
+    return true;
+  });
+
+  const pool = shuffle(unique).slice(0, target);
+  if (pool.length < MIN_QUESTIONS) {
+    throw new Error(`Could not fetch enough mixed questions (got ${pool.length})`);
+  }
+  console.log(`[Trivia] Mixed pool ready: ${pool.length} questions`);
+  return pool;
+}
+
+async function buildCustomQuestionPool(categorySlug) {
+  const categoryName = customCategoryName(categorySlug);
+  console.log(`[Trivia] Building CUSTOM pool for: ${categoryName}`);
+  const rows = await db.getCustomQuestions(categoryName);
+  if (!rows || rows.length < MIN_QUESTIONS) {
+    throw new Error(`Not enough custom questions in "${categoryName}" (found ${rows?.length || 0}, need ${MIN_QUESTIONS}).`);
+  }
+  const order = { easy: 0, medium: 1, hard: 2 };
+  const questions = rows
+    .map(r => ({
+      id:         String(r.id),
+      question:   r.question,
+      correct:    r.correct,
+      choices:    shuffle([r.correct, r.wrong1, r.wrong2, r.wrong3].filter(Boolean)),
+      difficulty: r.difficulty
+    }))
+    .sort((a, b) => (order[a.difficulty] || 1) - (order[b.difficulty] || 1));
+  console.log(`[Trivia] Custom pool ready: ${questions.length} questions`);
+  return questions;
+}
+
 const MIN_QUESTIONS = 15;
 
 async function buildQuestionPool(categorySlug) {
-  console.log(`[Trivia] Building pool for: ${categorySlug}`);
+  if (isCustomCategory(categorySlug)) return buildCustomQuestionPool(categorySlug);
+  if (categorySlug === 'all') return buildAllCategoriesPool(25);
 
+  console.log(`[Trivia] Building pool for: ${categorySlug}`);
   const [easy, medium, hard] = await Promise.all([
     fetchQuestions(categorySlug, 'easy',   20),
     fetchQuestions(categorySlug, 'medium', 20),
     fetchQuestions(categorySlug, 'hard',   20),
   ]);
-
   console.log(`[Trivia] Fetched easy:${easy.length} medium:${medium.length} hard:${hard.length}`);
 
   const all = [...easy, ...medium, ...hard];
-
-  // Deduplicate by question text within this fetch
   const seenText = new Set();
   const unique = all.filter(q => {
     if (seenText.has(q.question)) return false;
@@ -105,13 +155,10 @@ async function buildQuestionPool(categorySlug) {
     return true;
   });
 
-  // Filter out previously used questions
   let usedIds = await db.getUsedQuestions(categorySlug);
   let fresh   = unique.filter(q => !usedIds.has(q.id));
-
   console.log(`[Trivia] ${usedIds.size} previously used — ${fresh.length} fresh available`);
 
-  // If not enough fresh questions, reset history and use everything
   if (fresh.length < MIN_QUESTIONS) {
     console.log(`[Trivia] Pool nearly exhausted — resetting used history for ${categorySlug}`);
     await db.resetUsedQuestions(categorySlug);
@@ -119,22 +166,14 @@ async function buildQuestionPool(categorySlug) {
   }
 
   if (fresh.length < MIN_QUESTIONS) {
-    throw new Error(
-      `Not enough questions available in this category (found ${fresh.length}, need ${MIN_QUESTIONS}). ` +
-      `Please choose a different category.`
-    );
+    throw new Error(`Not enough questions available in this category (found ${fresh.length}, need ${MIN_QUESTIONS}).`);
   }
 
-  // Mark these questions as used for next time
   await db.markQuestionsUsed(categorySlug, fresh.map(q => q.id));
-
   console.log(`[Trivia] Pool ready: ${fresh.length} questions`);
   return fresh;
 }
 
-// ─────────────────────────────────────────────
-// UTILITIES
-// ─────────────────────────────────────────────
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -144,4 +183,4 @@ function shuffle(arr) {
   return a;
 }
 
-module.exports = { getCategories, buildQuestionPool };
+module.exports = { getCategories, buildQuestionPool, isCustomCategory };

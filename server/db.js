@@ -106,23 +106,24 @@ async function getGamesByHostId(host_id) {
 // ─────────────────────────────────────────────
 async function getPromotions(hostId) {
   const { rows } = await pool.query(
-    'SELECT venue, host_data FROM promotions WHERE host_id=$1',
+    'SELECT venue, host_data, venue_location FROM promotions WHERE host_id=$1',
     [String(hostId)]
   );
-  if (!rows[0]) return { venue: [], host: [] };
+  if (!rows[0]) return { venue: [], host: [], venueLocation: '' };
   return {
-    venue: rows[0].venue      || [],
-    host:  rows[0].host_data  || []
+    venue:         rows[0].venue          || [],
+    host:          rows[0].host_data      || [],
+    venueLocation: rows[0].venue_location || ''
   };
 }
 
-async function savePromotions(hostId, { venue, host }) {
+async function savePromotions(hostId, { venue, host, venueLocation }) {
   await pool.query(
-    `INSERT INTO promotions (host_id, venue, host_data)
-     VALUES ($1, $2, $3)
+    `INSERT INTO promotions (host_id, venue, host_data, venue_location)
+     VALUES ($1, $2, $3, $4)
      ON CONFLICT (host_id) DO UPDATE
-       SET venue=$2, host_data=$3`,
-    [String(hostId), JSON.stringify(venue), JSON.stringify(host)]
+       SET venue=$2, host_data=$3, venue_location=$4`,
+    [String(hostId), JSON.stringify(venue), JSON.stringify(host), venueLocation || '']
   );
 }
 
@@ -240,7 +241,7 @@ async function updatePlayerDisplayName(playerId, displayName) {
 
 async function getPlayerGameHistory(playerId) {
   const { rows } = await pool.query(
-    `SELECT * FROM player_game_history WHERE player_id=$1 ORDER BY played_at DESC LIMIT 5`,
+    `SELECT * FROM player_game_history WHERE player_id=$1 ORDER BY played_at DESC LIMIT 50`,
     [playerId]
   );
   return rows;

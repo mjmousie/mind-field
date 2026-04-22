@@ -14,7 +14,15 @@ const jwt    = require('jsonwebtoken');
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server, { cors: { origin: '*' } });
+// Grace period timers — gives players 30s to reconnect before removing them
+const disconnectTimers = new Map();
+
+const io     = new Server(server, {
+  cors: { origin: '*' },
+  pingTimeout:  60000,   // 60s before declaring connection dead
+  pingInterval: 25000,   // ping every 25s to keep connection alive
+  connectTimeout: 45000
+});
 const PORT   = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -38,7 +46,8 @@ function requireAuth(req, res, next) {
 // AUTH ROUTES
 // ─────────────────────────────────────────────
 app.post('/api/register', async (req, res) => {
-  try {
+ return res.status(403).json({ error: 'Registration is currently closed.' });
+ try {
     const result = await auth.registerHost(req.body);
     res.json({ success: true, ...result });
   } catch (e) {
@@ -333,10 +342,12 @@ app.post('/api/rooms', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'You already have an active room. End it before creating a new one.' });
     }
 
-    const { roomName, location, categoryId, categoryName } = req.body;
-    if (!roomName || !location || !categoryId || !categoryName) {
+    const { roomName, location, categoryId, categoryName, numQuestions, threshold, transitionSecs } = req.body;
+    if (!roomName || !location) {
       return res.status(400).json({ error: 'All fields are required' });
     }
+    const resolvedCategoryId   = categoryId   || 'all';
+    const resolvedCategoryName = categoryName || 'All Categories';
 
     // Profanity check on room name
     if (!filter.isClean(roomName)) {
@@ -344,12 +355,15 @@ app.post('/api/rooms', requireAuth, async (req, res) => {
     }
 
     const room = game.createRoom({
-      hostId:       req.hostData.id,
-      hostName:     req.hostData.displayName,
+      hostId:        req.hostData.id,
+      hostName:      req.hostData.displayName,
       roomName,
       location,
-      categoryId:   categoryId,   // slug string e.g. 'general_knowledge'
-      categoryName
+      categoryId:    resolvedCategoryId,
+      categoryName:  resolvedCategoryName,
+      numQuestions:  parseInt(numQuestions,  10) || 10,
+      threshold:     parseInt(threshold,     10),
+      transitionSecs:parseInt(transitionSecs,10) || 90
     });
 
     // QR code deep-links players straight to the room entry page
@@ -400,12 +414,12 @@ app.get('/api/promotions', requireAuth, async (req, res) => {
 
 app.post('/api/promotions', requireAuth, async (req, res) => {
   try {
-    const { venue, host: hostPromos } = req.body;
+    const { venue, host: hostPromos, venueLocation } = req.body;
     // All 4 fields required for a promo to count
     const isComplete = p => p?.headline?.trim() && p?.days?.trim() && p?.startTime?.trim() && p?.description?.trim();
     const cleanVenue = (venue      || []).filter(isComplete);
     const cleanHost  = (hostPromos || []).filter(isComplete);
-    await db.savePromotions(req.hostData.id, { venue: cleanVenue, host: cleanHost });
+    await db.savePromotions(req.hostData.id, { venue: cleanVenue, host: cleanHost, venueLocation: venueLocation || '' });
     console.log(`[Promotions] Saved for host ${req.hostData.id}: ${cleanVenue.length} venue, ${cleanHost.length} host`);
     res.json({ success: true, saved: { venue: cleanVenue.length, host: cleanHost.length } });
   } catch (e) {
@@ -568,7 +582,51 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`[-] Socket disconnected: ${socket.id}`);
     if (socket.data.roomKey && !socket.data.isHost) {
-      handlePlayerLeave(socket, socket.data.roomKey);
+      // Give player 30 seconds to reconnect before removing them
+      const timer = setTimeout(() => {
+        disconnectTimers.delete(socket.id);
+        handlePlayerLeave(socket, socket.data.roomKey);
+      }, 300000);
+      disconnectTimers.set(socket.id, {
+        timer,
+        roomKey:  socket.data.roomKey,
+        nickname: socket.data.nickname,
+        playerId: socket.data.playerId
+      });
+    }
+  });
+
+  // When a player reconnects, cancel their removal timer and restore their state
+  socket.on('player:reconnect', ({ roomKey, nickname }) => {
+    for (const [oldSocketId, data] of disconnectTimers.entries()) {
+      if (data.roomKey === roomKey && data.nickname === nickname) {
+        clearTimeout(data.timer);
+        disconnectTimers.delete(oldSocketId);
+        console.log(`[+] Player reconnected: ${nickname}`);
+
+        socket.data.roomKey  = roomKey;
+        socket.data.nickname = nickname;
+        socket.data.playerId = data.playerId;
+        socket.data.isHost   = false;
+        socket.join(roomKey);
+
+        game.updatePlayerSocket(roomKey, oldSocketId, socket.id, nickname);
+
+        const room       = game.getRoom(roomKey);
+        const playerList = game.getPlayerList(room);
+        socket.emit('player:joined', { nickname, roomName: room.roomName, playerCount: playerList.length, reconnected: true });
+
+        const currentQ = game.getCurrentQuestion(roomKey);
+        if (currentQ) socket.emit('game:question', currentQ);
+
+        io.to(roomKey).emit('room:update', {
+          players:      playerList,
+          total:        playerList.length,
+          activeCount:  game.getActivePlayers(room).length,
+          totalStarted: room.totalStarted || playerList.length
+        });
+        break;
+      }
     }
   });
 });
@@ -622,4 +680,22 @@ server.listen(PORT, () => {
   console.log(`\n🧠  Mind Field running → http://localhost:${PORT}\n`);
   console.log(`    Host interface  →  http://localhost:${PORT}/host`);
   console.log(`    Player join     →  http://localhost:${PORT}/player\n`);
+});
+
+// ─────────────────────────────────────────────
+// SOLO MODE ROUTES
+// ─────────────────────────────────────────────
+
+app.get('/api/solo/questions', async (req, res) => {
+  try {
+    const pool = await trivia.buildQuestionPool('all');
+    const questions = pool.slice(0, 25).map(q => ({
+      question: q.question,
+      choices:  q.choices,
+      correct:  q.correct
+    }));
+    res.json({ questions });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
